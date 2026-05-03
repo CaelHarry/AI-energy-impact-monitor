@@ -1,0 +1,198 @@
+version: "3.9"
+
+# ─────────────────────────────────────────────────────────────────
+#  AI & Energy Data Pipeline — Docker Compose
+#
+#  Data sources:
+#    - AirNow          (EPA air quality index, regional AQI)
+#    - Open-Meteo      (weather + heat index — no key required)
+#    - USGS            (seismic activity — no key required)
+#    - EIA             (US grid generation mix — free API key)
+#    - ERCOT / CAISO / PJM  (regional grid demand — public feeds)
+#    - NRC             (nuclear reactor daily status — public)
+#
+#  Services:
+#    postgres          PostgreSQL 16 + TimescaleDB
+#    airflow-init      one-shot DB migration + admin user creation
+#    airflow-webserver Airflow UI  → http://localhost:8080
+#    airflow-scheduler DAG scheduler
+#    dbt               transformation layer (run on-demand)
+#    pgadmin           DB browser UI → http://localhost:5050
+# ─────────────────────────────────────────────────────────────────
+
+x-airflow-common: &airflow-common
+  image: apache/airflow:2.9.1-python3.11
+  environment: &airflow-env
+    # ── Airflow core ───────────────────────────────────────────
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY}
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "false"
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__CORE__DEFAULT_TIMEZONE: UTC
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:${AIRFLOW_DB_PASSWORD}@postgres:5432/airflow
+    AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_SECRET_KEY}
+    AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "true"
+    AIRFLOW__LOGGING__LOGGING_LEVEL: INFO
+
+    # ── Pipeline DB (DAGs + dbt connect as this user) ──────────
+    PIPELINE_DB_CONN: postgresql://pipeline:${PIPELINE_DB_PASSWORD}@postgres:5432/pipeline
+
+    # ── AirNow — EPA air quality ───────────────────────────────
+    # Free key: https://docs.airnowapi.org/account/request/
+    AIRNOW_API_KEY: ${AIRNOW_API_KEY}
+
+    # ── Open-Meteo — weather & heat index (no key needed) ──────
+    OPEN_METEO_BASE_URL: "https://api.open-meteo.com/v1"
+
+    # ── EIA — US grid generation mix ──────────────────────────
+    # Free key: https://www.eia.gov/opendata/register.php
+    EIA_API_KEY: ${EIA_API_KEY}
+
+    # ── Regional grid operators (public JSON/REST feeds) ───────
+    # ERCOT (Texas)
+    ERCOT_BASE_URL: "https://www.ercot.com/api/1/services/read"
+    # CAISO (California)
+    CAISO_BASE_URL: "https://oasis.caiso.com/oasisapi/SingleZip"
+    # PJM (Mid-Atlantic / data-center corridor)
+    PJM_BASE_URL: "https://dataminer2.pjm.com/feed"
+
+    # ── NRC — nuclear reactor daily status (public) ────────────
+    NRC_STATUS_URL: "https://www.nrc.gov/reading-rm/doc-collections/event-status/reactor-status/powerreactorstatusforlast365days.txt"
+
+  volumes:
+    - ./airflow/dags:/opt/airflow/dags
+    - ./airflow/plugins:/opt/airflow/plugins
+    - ./airflow/logs:/opt/airflow/logs
+    - ./airflow/requirements.txt:/requirements.txt
+  depends_on:
+    postgres:
+      condition: service_healthy
+  networks:
+    - pipeline-net
+  restart: unless-stopped
+
+# ─────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── 1. PostgreSQL + TimescaleDB ──────────────────────────────
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    container_name: pipeline-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_ROOT_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    networks:
+      - pipeline-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ── 2. Airflow — one-shot initialisation ────────────────────
+  airflow-init:
+    <<: *airflow-common
+    container_name: pipeline-airflow-init
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        pip install -r /requirements.txt --quiet
+        airflow db migrate
+        airflow users create \
+          --username admin \
+          --firstname Admin \
+          --lastname User \
+          --role Admin \
+          --email admin@pipeline.local \
+          --password ${AIRFLOW_ADMIN_PASSWORD}
+    restart: "no"
+
+  # ── 3. Airflow — webserver ───────────────────────────────────
+  airflow-webserver:
+    <<: *airflow-common
+    container_name: pipeline-airflow-webserver
+    command: >
+      bash -c "pip install -r /requirements.txt --quiet && airflow webserver"
+    ports:
+      - "8080:8080"
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ── 4. Airflow — scheduler ───────────────────────────────────
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: pipeline-airflow-scheduler
+    command: >
+      bash -c "pip install -r /requirements.txt --quiet && airflow scheduler"
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "airflow jobs check --job-type SchedulerJob --hostname $(hostname)"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ── 5. dbt ───────────────────────────────────────────────────
+  dbt:
+    image: ghcr.io/dbt-labs/dbt-postgres:1.8.latest
+    container_name: pipeline-dbt
+    environment:
+      DBT_PROFILES_DIR: /dbt
+      PIPELINE_DB_HOST: postgres
+      PIPELINE_DB_PORT: 5432
+      PIPELINE_DB_NAME: pipeline
+      PIPELINE_DB_USER: pipeline
+      PIPELINE_DB_PASSWORD: ${PIPELINE_DB_PASSWORD}
+    volumes:
+      - ./dbt:/dbt
+      - ./dbt/profiles.yml:/dbt/profiles.yml
+    networks:
+      - pipeline-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["dbt", "debug"]
+    restart: "no"
+
+  # ── 6. pgAdmin ───────────────────────────────────────────────
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pipeline-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@pipeline.local
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    networks:
+      - pipeline-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+# ─────────────────────────────────────────────────────────────────
+
+volumes:
+  postgres-data:
+  pgadmin-data:
+
+networks:
+  pipeline-net:
+    driver: bridge
