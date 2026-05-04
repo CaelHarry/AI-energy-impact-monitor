@@ -1,0 +1,32 @@
+# ─────────────────────────────────────────────────────────────────
+#  Force correct line endings regardless of the developer's OS
+# ─────────────────────────────────────────────────────────────────
+
+# Default — normalize all text files to LF on commit
+* text=auto eol=lf
+
+# Shell scripts MUST be LF — CRLF breaks Linux containers
+*.sh text eol=lf
+
+# Python files — LF
+*.py text eol=lf
+
+# Config and data files — LF
+*.yml text eol=lf
+*.yaml text eol=lf
+*.sql text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.toml text eol=lf
+*.json text eol=lf
+*.env text eol=lf
+
+# Binary files — no line ending conversion
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.gz binary
+*.zip binary
+*.tar binary

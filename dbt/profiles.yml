@@ -1,0 +1,14 @@
+pipeline:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: "{{ env_var('PIPELINE_DB_HOST', 'localhost') }}"
+      port: "{{ env_var('PIPELINE_DB_PORT', '5432') | int }}"
+      dbname: "{{ env_var('PIPELINE_DB_NAME', 'pipeline') }}"
+      user: "{{ env_var('PIPELINE_DB_USER', 'pipeline') }}"
+      password: "{{ env_var('PIPELINE_DB_PASSWORD') }}"
+      schema: marts          # dbt writes transformed models here
+      threads: 4
+      keepalives_idle: 0
+      connect_timeout: 10
