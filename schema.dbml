@@ -1,0 +1,140 @@
+// =================================================================
+//  AI Energy Impact Monitor — Database Schema
+//  Format: DBML (dbdiagram.io)
+//  Render at: https://dbdiagram.io/d
+//  Kept in sync with: postgres/schema/01_raw_schema.sql
+// =================================================================
+
+Table grid_regions {
+  region_id    text        [pk, note: "ERCOT | CAISO | PJM | EIA_US"]
+  operator     text        [not null]
+  display_name text        [not null]
+  state_codes  text[]
+  lat          numeric
+  lon          numeric
+  created_at   timestamptz [not null, default: "now()"]
+
+  Note: "Reference table. Every time-series row links back here via region_id."
+}
+
+Table aqi_raw {
+  time          timestamptz [not null, note: "Hypertable partition key"]
+  region_id     text        [not null, ref: > grid_regions.region_id]
+  station_id    text        [not null]
+  lat           numeric
+  lon           numeric
+  parameter     text        [not null, note: "PM2.5 | PM10 | O3 | NO2 | CO | SO2"]
+  aqi           integer
+  concentration numeric
+  unit          text
+  category      text        [note: "Good | Moderate | USG | Unhealthy | Hazardous"]
+  ingested_at   timestamptz [not null, default: "now()"]
+
+  indexes {
+    (region_id, time) [name: "aqi_raw_region_time"]
+    (station_id, time) [name: "aqi_raw_station_time"]
+  }
+
+  Note: "AirNow (EPA). Updated every 30 minutes per monitoring station."
+}
+
+Table weather_raw {
+  time                 timestamptz [not null, note: "Hypertable partition key"]
+  region_id            text        [not null, ref: > grid_regions.region_id]
+  temperature_2m       numeric     [note: "Degrees Celsius"]
+  apparent_temperature numeric     [note: "Feels-like / heat index, Celsius"]
+  relative_humidity    numeric     [note: "Percent"]
+  precipitation        numeric     [note: "mm"]
+  wind_speed_10m       numeric     [note: "km/h"]
+  wind_direction_10m   numeric     [note: "Degrees"]
+  cloud_cover          numeric     [note: "Percent"]
+  surface_pressure     numeric     [note: "hPa"]
+  is_forecast          boolean     [not null, default: false]
+  ingested_at          timestamptz [not null, default: "now()"]
+
+  indexes {
+    (region_id, time) [name: "weather_raw_region_time"]
+  }
+
+  Note: "Open-Meteo. Hourly observations and short-range forecasts. No API key required."
+}
+
+Table grid_generation_raw {
+  time            timestamptz [not null, note: "Hypertable partition key"]
+  region_id       text        [not null, ref: > grid_regions.region_id]
+  natural_gas_mwh numeric
+  coal_mwh        numeric
+  nuclear_mwh     numeric
+  wind_mwh        numeric
+  solar_mwh       numeric
+  hydro_mwh       numeric
+  other_mwh       numeric
+  total_mwh       numeric
+  nuclear_pct     numeric     [note: "Derived at ingest for query performance"]
+  fossil_pct      numeric     [note: "coal + natural gas as % of total"]
+  clean_pct       numeric     [note: "nuclear + wind + solar + hydro as % of total"]
+  ingested_at     timestamptz [not null, default: "now()"]
+
+  indexes {
+    (region_id, time) [name: "grid_gen_region_time"]
+  }
+
+  Note: "EIA API. Hourly generation mix by fuel type. Percentages derived at ingest."
+}
+
+Table grid_demand_raw {
+  time         timestamptz [not null, note: "Hypertable partition key"]
+  region_id    text        [not null, ref: > grid_regions.region_id]
+  demand_mw    numeric     [not null, note: "Actual instantaneous load"]
+  forecast_mw  numeric     [note: "Operator day-ahead forecast"]
+  net_load_mw  numeric     [note: "Demand minus renewable generation"]
+  source       text        [not null, note: "ercot | caiso | pjm"]
+  ingested_at  timestamptz [not null, default: "now()"]
+
+  indexes {
+    (region_id, time) [name: "grid_demand_region_time"]
+  }
+
+  Note: "ERCOT / CAISO / PJM public feeds. Updated every 5 minutes."
+}
+
+Table nuclear_status_raw {
+  time        timestamptz [not null, note: "Hypertable partition key — daily"]
+  region_id   text        [ref: > grid_regions.region_id]
+  unit_name   text        [not null, note: "e.g. VOGTLE 3"]
+  power_pct   numeric     [note: "Percent of licensed thermal capacity"]
+  status_code text        [note: "NRC operational status code"]
+  state_code  text        [note: "2-letter US state"]
+  operator    text        [note: "Utility name"]
+  ingested_at timestamptz [not null, default: "now()"]
+
+  indexes {
+    (unit_name, time) [name: "nuclear_unit_time"]
+    (region_id, time) [name: "nuclear_region_time"]
+  }
+
+  Note: "NRC daily reactor status report. Power output as % of licensed capacity."
+}
+
+Table seismic_raw {
+  time           timestamptz [not null, note: "Hypertable partition key"]
+  event_id       text        [not null, note: "USGS unique event ID"]
+  magnitude      numeric     [not null]
+  magnitude_type text        [note: "ml | mw | mb | md"]
+  depth_km       numeric
+  lat            numeric     [not null]
+  lon            numeric     [not null]
+  place          text        [note: "Human-readable location from USGS"]
+  alert_level    text        [note: "green | yellow | orange | red"]
+  tsunami        boolean     [not null, default: false]
+  region_id      text        [ref: > grid_regions.region_id]
+  ingested_at    timestamptz [not null, default: "now()"]
+
+  indexes {
+    (event_id, time) [unique, name: "seismic_event_id"]
+    (magnitude, time) [name: "seismic_mag_time"]
+    (region_id, time) [name: "seismic_region_time"]
+  }
+
+  Note: "USGS M1.0+ events globally. Relevant for nuclear plant proximity monitoring."
+}
