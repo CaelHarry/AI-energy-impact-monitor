@@ -79,7 +79,8 @@ desktop.ini
 .project
 .classpath
 .settings/
-
+.claude/
+CLAUDE.md
 # ── Data files (keep schema, not raw data) ────────────────────
 *.csv
 *.parquet
