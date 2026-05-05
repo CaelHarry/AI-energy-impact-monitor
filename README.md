@@ -173,52 +173,9 @@ docker exec -it pipeline-postgres psql -U pipeline -d pipeline -c "\dx"
 
 - [x] Phase 1 — Docker Compose infrastructure
 - [x] Phase 2 — TimescaleDB schema (raw hypertables)
-- [x] Phase 3 — Airflow DAGs (one per source)
+- [ ] Phase 3 — Airflow DAGs (one per source)
 - [ ] Phase 4 — dbt transformation models
 - [ ] Phase 5 — Live heatmap dashboard
-
-## DAGs
-
-All DAGs follow the same three-step pattern: **fetch** from the API, **validate** with pydantic, **upsert** into the raw hypertable. They run on independent schedules matched to each source's update frequency.
-
-| DAG | Source | Schedule | Table | Notes |
-|---|---|---|---|---|
-| `dag_nrc` | NRC reactor status | Daily 08:00 UTC | `nuclear_status_raw` | Pipe-delimited text file, reactor capacity % per unit |
-| `dag_seismic` | USGS earthquake feed | Every 10 min | `seismic_raw` | M1.0+ global events, assigned to grid regions by bounding box |
-| `dag_weather` | Open-Meteo | Hourly (04 min past) | `weather_raw` | Pulls past 2hrs + next 6hrs, flags rows as forecast or observation |
-| `dag_airnow` | AirNow (EPA) | Every 30 min (02 min past) | `aqi_raw` | AQI within 200km of each region centroid, all parameters |
-| `dag_eia_grid` | EIA API v2 | Hourly (06 min past) | `grid_generation_raw` | Pivots fuel-type rows into wide format, derives pct columns at ingest |
-| `dag_grid_demand` | ERCOT / CAISO / PJM | Every 5 min | `grid_demand_raw` | Each operator fetched independently — one failure does not block others |
-
-### Shared plugin layer
-
-DAG logic is built on a shared plugin at `airflow/plugins/pipeline/`:
-
-- `db.py` — `upsert()` and `upsert_ignore()` helpers used by every DAG. Change retry or conflict logic here once and it applies everywhere.
-- `models.py` — pydantic v2 validation models, one per source. Bad rows are logged and skipped — never written to the database.
-
-### Activating DAGs
-
-Airflow watches `airflow/dags/` and picks up new files automatically within ~30 seconds. All DAGs are paused by default on first load — enable them individually in the Airflow UI at `http://localhost:8080` or via CLI:
-
-```bash
-# enable a single DAG
-docker exec pipeline-airflow-scheduler airflow dags unpause dag_nrc
-
-# enable all pipeline DAGs at once
-docker exec pipeline-airflow-scheduler bash -c "
-  for dag in dag_nrc dag_seismic dag_weather dag_airnow dag_eia_grid dag_grid_demand; do
-    airflow dags unpause \$dag
-  done
-"
-```
-
-### Monitoring
-
-- Green circle in Airflow UI = last run succeeded
-- Red circle = last run failed — click the DAG → Graph view → failed task → Logs
-- All DAGs log at INFO level with row counts per run
-- If an API is down, the DAG fails and Airflow retries automatically on the next schedule interval
 
 ## Useful commands
 
