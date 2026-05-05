@@ -1,13 +1,14 @@
 # airflow/dags/dag_airnow.py
 #
-# Fetches current AQI observations from AirNow (EPA) for each grid region.
-# Schedule: every 30 minutes, staggered 2 minutes past the half-hour
+# Fetches hourly AQI observations from the AirNow /aq/data/ API.
+# Queries by bounding box for each grid region (ERCOT, CAISO, PJM).
+# Schedule: hourly (2 minutes past the hour)
 #
-# Source: https://docs.airnowapi.org
-# Requires: AIRNOW_API_KEY in environment
+# Source: https://www.airnowapi.org/aq/data/
+# Requires: AIRNOW_API_KEY environment variable
 
-import os
 import logging
+import os
 from datetime import datetime, timezone
 
 import httpx
@@ -19,15 +20,14 @@ from pipeline.models import AqiRow
 
 log = logging.getLogger(__name__)
 
-BASE_URL = "https://www.airnowapi.org/aq/observation/latLong/current/"
+BASE_URL = "https://www.airnowapi.org/aq/data/"
+PARAMETERS = "PM25,OZONE,PM10,CO,NO2,SO2"
 
-AIRNOW_API_KEY = os.environ.get("AIRNOW_API_KEY", "")
-
-# Bounding boxes per region [min_lat, min_lon, max_lat, max_lon]
-REGIONS = {
-    "ERCOT": {"lat": 31.9686, "lon": -99.9018, "distance": 200},
-    "CAISO": {"lat": 36.7783, "lon": -119.4179, "distance": 200},
-    "PJM":   {"lat": 39.9526, "lon": -75.1652,  "distance": 200},
+# Bounding boxes: "minLon,minLat,maxLon,maxLat"
+REGION_BBOXES: dict[str, str] = {
+    "ERCOT": "-107.0,25.8,-93.5,36.5",    # Texas
+    "CAISO": "-124.5,32.5,-114.0,42.0",   # California
+    "PJM":   "-92.0,35.0,-74.0,47.0",     # Mid-Atlantic / Midwest
 }
 
 
@@ -38,96 +38,93 @@ REGIONS = {
     catchup=False,
     tags=["aqi", "airnow", "epa"],
     doc_md="""
-    ### AirNow AQI
-    Fetches current AQI readings from AirNow (EPA) for monitoring stations
-    within 200km of each grid region centroid.
-    Parameters: PM2.5, PM10, O3, NO2, CO, SO2
+    ### AirNow AQI — bounding-box data API
+    Fetches hourly AQI observations from the AirNow /aq/data/ endpoint.
+    Queries all monitoring stations within bounding boxes for ERCOT, CAISO, and PJM.
     Written to: `aqi_raw`
     """,
 )
 def dag_airnow():
 
     @task()
-    def fetch_aqi() -> list[dict]:
+    def fetch_all_regions() -> list[dict]:
         """
-        Fetch current AQI observations for all regions.
-        AirNow returns all active monitoring stations within `distance` km
-        of the given lat/lon.
+        Fetch AQI observations for all three regions via /aq/data/ bounding-box queries.
+        One HTTP request per region; individual failures are caught so others still run.
         """
-        if not AIRNOW_API_KEY:
-            raise RuntimeError("AIRNOW_API_KEY is not set in the environment")
+        api_key = os.environ["AIRNOW_API_KEY"]
+        now = datetime.now(timezone.utc)
+        hour_str = now.strftime("%Y-%m-%dT%H")
 
-        results = []
-
-        with httpx.Client(timeout=30) as client:
-            for region_id, coords in REGIONS.items():
+        all_rows: list[dict] = []
+        with httpx.Client(timeout=30, follow_redirects=True) as client:
+            for region_id, bbox in REGION_BBOXES.items():
                 params = {
-                    "format":       "application/json",
-                    "latitude":     coords["lat"],
-                    "longitude":    coords["lon"],
-                    "distance":     coords["distance"],
-                    "API_KEY":      AIRNOW_API_KEY,
+                    "startDate":  hour_str,
+                    "endDate":    hour_str,
+                    "parameters": PARAMETERS,
+                    "BBOX":       bbox,
+                    "dataType":   "C",
+                    "format":     "application/json",
+                    "verbose":    "1",
+                    "API_KEY":    api_key,
                 }
-                log.info("fetching AQI for %s", region_id)
-                resp = client.get(BASE_URL, params=params)
-                resp.raise_for_status()
-                readings = resp.json()
-                log.info("got %d readings for %s", len(readings), region_id)
-                results.append({"region_id": region_id, "readings": readings})
+                try:
+                    resp = client.get(BASE_URL, params=params)
+                    resp.raise_for_status()
+                    data = resp.json()
+                    if not isinstance(data, list):
+                        log.warning("AirNow %s: unexpected response shape", region_id)
+                        continue
+                    for item in data:
+                        item["_region_id"] = region_id
+                    all_rows.extend(data)
+                    log.info("AirNow %s: fetched %d observations", region_id, len(data))
+                except Exception as e:
+                    log.error("AirNow fetch failed for %s: %s", region_id, e)
 
-        return results
+        log.info("fetched %d total observations across all regions", len(all_rows))
+        return all_rows
 
     @task()
-    def parse_and_validate(raw_results: list[dict]) -> list[dict]:
-        """
-        Validate each AQI reading.
-        AirNow response fields: DateObserved, HourObserved, LocalTimeZone,
-        ReportingArea, StateCode, Latitude, Longitude, ParameterName,
-        AQI, Category.Name
-        """
-        rows = []
-        bad  = 0
+    def validate(raw_rows: list[dict]) -> list[dict]:
+        """Validate each observation into AqiRow."""
+        rows: list[dict] = []
+        bad = 0
+        for item in raw_rows:
+            try:
+                utc_str = item.get("UTC", "")
+                obs_time = datetime.strptime(utc_str, "%Y-%m-%dT%H:%M").replace(tzinfo=timezone.utc)
 
-        for result in raw_results:
-            region_id = result["region_id"]
+                category = item.get("Category", {})
+                category_name = (
+                    category.get("Name") if isinstance(category, dict) else str(category) or None
+                )
 
-            for reading in result["readings"]:
-                # Build ISO timestamp from AirNow date + hour fields
-                date_str = reading.get("DateObserved", "").strip()
-                hour     = reading.get("HourObserved", 0)
-                tz_str   = reading.get("LocalTimeZone", "UTC")
+                aqi_val = item.get("AQI")
+                row = AqiRow(
+                    time=obs_time,
+                    region_id=item.get("_region_id", ""),
+                    station_id=item.get("FullAQSCode") or item.get("IntlAQSCode") or "",
+                    lat=item.get("Latitude"),
+                    lon=item.get("Longitude"),
+                    parameter=item.get("Parameter", ""),
+                    aqi=int(aqi_val) if aqi_val is not None and int(aqi_val) >= 0 else None,
+                    concentration=item.get("Value") or item.get("RawConcentration"),
+                    unit=item.get("Unit") or None,
+                    category=category_name or None,
+                )
+                rows.append(row.to_db())
+            except (ValidationError, Exception) as e:
+                log.warning("skipping row %s: %s", item.get("FullAQSCode", "?"), e)
+                bad += 1
 
-                try:
-                    # Parse to UTC — AirNow hours are local time
-                    # Simplified: treat as UTC (good enough for trend analysis)
-                    time_str = f"{date_str}T{int(hour):02d}:00:00+00:00"
-                    station_id = (
-                        f"{reading.get('ReportingArea','')}"
-                        f"_{reading.get('StateCode','')}"
-                        f"_{reading.get('ParameterName','')}"
-                    ).replace(" ", "_").upper()
-
-                    row = AqiRow(
-                        time=time_str,
-                        region_id=region_id,
-                        station_id=station_id,
-                        lat=reading.get("Latitude"),
-                        lon=reading.get("Longitude"),
-                        parameter=reading.get("ParameterName", "").strip(),
-                        aqi=reading.get("AQI"),
-                        category=reading.get("Category", {}).get("Name"),
-                    )
-                    rows.append(row.to_db())
-                except (ValidationError, Exception) as e:
-                    log.warning("skipping reading %s: %s", reading, e)
-                    bad += 1
-
-        log.info("parsed %d valid rows, %d skipped", len(rows), bad)
+        log.info("validated %d rows, %d skipped", len(rows), bad)
         return rows
 
     @task()
     def load(rows: list[dict]) -> int:
-        """Upsert AQI rows — update if a corrected reading arrives."""
+        """Upsert AQI rows — DO UPDATE so corrected readings overwrite stale ones."""
         if not rows:
             log.warning("no AQI rows to load")
             return 0
@@ -137,8 +134,8 @@ def dag_airnow():
             conflict_cols=["time", "station_id", "parameter"],
         )
 
-    raw   = fetch_aqi()
-    valid = parse_and_validate(raw)
+    raw   = fetch_all_regions()
+    valid = validate(raw)
     load(valid)
 
 

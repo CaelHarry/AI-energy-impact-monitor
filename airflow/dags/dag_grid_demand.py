@@ -10,7 +10,6 @@
 
 import logging
 from datetime import datetime, timezone
-from zoneinfo import ZoneInfo
 
 import httpx
 from airflow.decorators import dag, task
@@ -62,9 +61,9 @@ def fetch_caiso(client: httpx.Client) -> list[dict]:
     """
     CAISO OASIS API — real-time system load (RTLOAD).
     """
-    now_pt = datetime.now(ZoneInfo("America/Los_Angeles"))
-    start  = now_pt.strftime("%Y%m%dT%H:%M-0000")
-    end    = now_pt.strftime("%Y%m%dT%H:%M-0000")
+    now_utc = datetime.now(timezone.utc)
+    start   = now_utc.strftime("%Y%m%dT%H:%M+0000")
+    end     = now_utc.strftime("%Y%m%dT%H:%M+0000")
 
     url = "https://oasis.caiso.com/oasisapi/SingleZip"
     params = {

@@ -321,3 +321,24 @@ SELECT add_retention_policy('nuclear_status_raw',  INTERVAL '365 days', if_not_e
 --    FROM timescaledb_information.compressed_chunk_stats
 --    GROUP BY hypertable_name;
 -- =================================================================
+
+
+-- =================================================================
+--  Unique indexes required for ON CONFLICT upsert in DAGs
+--  TimescaleDB requires the time partition column in every unique index.
+-- =================================================================
+
+CREATE UNIQUE INDEX IF NOT EXISTS aqi_raw_upsert_key
+    ON aqi_raw (time, station_id, parameter);
+
+CREATE UNIQUE INDEX IF NOT EXISTS weather_raw_upsert_key
+    ON weather_raw (time, region_id);
+
+CREATE UNIQUE INDEX IF NOT EXISTS grid_gen_upsert_key
+    ON grid_generation_raw (time, region_id);
+
+CREATE UNIQUE INDEX IF NOT EXISTS grid_demand_upsert_key
+    ON grid_demand_raw (time, region_id, source);
+
+CREATE UNIQUE INDEX IF NOT EXISTS nuclear_upsert_key
+    ON nuclear_status_raw (time, unit_name);

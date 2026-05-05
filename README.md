@@ -115,12 +115,10 @@ mkdir -p airflow/dags airflow/plugins airflow/logs
 ### 3. Start the stack
 
 ```bash
-# Initialise Airflow DB and create admin user (run once)
-docker compose up airflow-init
-
-# Once init exits with code 0, start all services
-docker compose up -d postgres airflow-webserver airflow-scheduler pgadmin
+make up
 ```
+
+On first run this initialises the Airflow database and creates the admin user automatically before starting all services.
 
 ### 4. Verify
 
@@ -157,8 +155,9 @@ docker exec -it pipeline-postgres psql -U pipeline -d pipeline -c "\dx"
 │
 ├── airflow/
 │   ├── requirements.txt
-│   ├── dags/
+│   ├── dags/              ← one DAG per source
 │   └── plugins/
+│       └── pipeline/      ← shared helpers (models.py, db.py)
 │
 └── dbt/
     ├── profiles.yml
@@ -173,30 +172,41 @@ docker exec -it pipeline-postgres psql -U pipeline -d pipeline -c "\dx"
 
 - [x] Phase 1 — Docker Compose infrastructure
 - [x] Phase 2 — TimescaleDB schema (raw hypertables)
-- [ ] Phase 3 — Airflow DAGs (one per source)
+- [x] Phase 3 — Airflow DAGs (one per source)
 - [ ] Phase 4 — dbt transformation models
 - [ ] Phase 5 — Live heatmap dashboard
 
 ## Useful commands
 
 ```bash
-# View all container logs
-docker compose logs -f
+make up          # Start all services
+make down        # Stop all services (data volumes preserved)
+make reset       # Full teardown including data — destructive
+make logs        # Tail all container logs
+make dbt-run     # Run all dbt models
+make dbt-test    # Run dbt data quality tests
+```
 
-# Restart a single service
+Apply or re-apply the database schema:
+
+```bash
+make schema      # Linux / Mac
+```
+
+```powershell
+# Windows — make schema uses shell redirection which fails on PowerShell
+docker cp postgres/schema/01_raw_schema.sql pipeline-postgres:/tmp/schema.sql
+docker exec pipeline-postgres psql -U pipeline -d pipeline -f /tmp/schema.sql
+```
+
+Other common operations:
+
+```bash
+# Restart a single service after changing plugin code
 docker compose restart airflow-scheduler
 
-# Run dbt manually
-docker compose run --rm dbt dbt run
-
-# Run dbt tests
-docker compose run --rm dbt dbt test
-
-# Stop all services (keeps data volumes)
-docker compose down
-
-# Full reset including all data (destructive)
-docker compose down -v
+# Direct DB access
+docker exec -it pipeline-postgres psql -U pipeline -d pipeline
 ```
 
 ## Contributing
@@ -252,7 +262,11 @@ docker compose up airflow-init
 docker compose up -d postgres airflow-webserver airflow-scheduler pgadmin
 
 # 8. Apply the database schema
+# Linux/Mac:
 make schema
+# Windows (PowerShell):
+docker cp postgres/schema/01_raw_schema.sql pipeline-postgres:/tmp/schema.sql
+docker exec pipeline-postgres psql -U pipeline -d pipeline -f /tmp/schema.sql
 ```
 
 ### Fernet key — same or new?
