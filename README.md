@@ -15,7 +15,7 @@ Pulls live data from six public sources, stores it in a time-series PostgreSQL d
 | [AirNow (EPA)](https://docs.airnowapi.org) | Regional AQI by location | Every 30 min | Yes (free) |
 | [Open-Meteo](https://open-meteo.com) | Temperature, heat index, wind | Hourly | No |
 | [EIA](https://www.eia.gov/opendata) | Grid generation mix (coal/gas/nuclear/solar %) | Hourly | Yes (free) |
-| [ERCOT](https://www.ercot.com/gridinfo) / [CAISO](https://oasis.caiso.com) / [PJM](https://dataminer2.pjm.com) | Regional grid demand load | Every 5 min | No |
+| [EIA Form 930](https://www.eia.gov/opendata) | Regional grid demand (ERCOT / CAISO / PJM) | Hourly | Yes (free, same key as above) |
 | [NRC](https://www.nrc.gov/reading-rm/doc-collections/event-status/reactor-status/) | Nuclear reactor capacity % | Daily | No |
 | [USGS](https://earthquake.usgs.gov/earthquakes/feed/) | Seismic activity M1.0+ | Every 10 min | No |
 
@@ -73,7 +73,7 @@ Six raw hypertables (time-partitioned by TimescaleDB) all reference a central `g
 | `aqi_raw` | AirNow (EPA) | Every 30 min |
 | `weather_raw` | Open-Meteo | Hourly |
 | `grid_generation_raw` | EIA | Hourly |
-| `grid_demand_raw` | ERCOT / CAISO / PJM | Every 5 min |
+| `grid_demand_raw` | EIA Form 930 (ERCOT / CAISO / PJM) | Hourly |
 | `nuclear_status_raw` | NRC | Daily |
 | `seismic_raw` | USGS | Every 10 min |
 
@@ -173,7 +173,7 @@ docker exec -it pipeline-postgres psql -U pipeline -d pipeline -c "\dx"
 - [x] Phase 1 — Docker Compose infrastructure
 - [x] Phase 2 — TimescaleDB schema (raw hypertables)
 - [x] Phase 3 — Airflow DAGs (one per source)
-- [ ] Phase 4 — dbt transformation models
+- [x] Phase 4 — dbt transformation layer (16 models, 65 tests)
 - [ ] Phase 5 — Live heatmap dashboard
 
 ## Useful commands

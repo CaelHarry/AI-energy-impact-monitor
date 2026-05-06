@@ -1,0 +1,112 @@
+version: 2
+
+models:
+  - name: stg_aqi
+    description: >
+      Station-level AQI readings from AirNow (EPA). Filtered to valid
+      (non-negative, non-null) AQI values. One row per station-parameter-timestamp.
+    columns:
+      - name: time
+        description: "Observation timestamp UTC."
+        tests:
+          - not_null
+      - name: region_id
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['ERCOT', 'CAISO', 'PJM', 'EIA_US']
+      - name: station_id
+        tests:
+          - not_null
+      - name: parameter
+        tests:
+          - not_null
+      - name: aqi
+        tests:
+          - not_null
+
+  - name: stg_weather
+    description: >
+      Hourly weather observations and forecasts per region centroid from
+      Open-Meteo. Filtered to rows with a valid temperature_2m reading.
+    columns:
+      - name: time
+        tests:
+          - not_null
+      - name: region_id
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['ERCOT', 'CAISO', 'PJM', 'EIA_US']
+      - name: temperature_2m
+        tests:
+          - not_null
+
+  - name: stg_grid_generation
+    description: >
+      Hourly EIA generation mix by fuel type per region. Filtered to rows
+      with valid total_mwh. Percentage columns are pre-computed at ingest.
+    columns:
+      - name: time
+        tests:
+          - not_null
+      - name: region_id
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['ERCOT', 'CAISO', 'PJM', 'EIA_US']
+      - name: total_mwh
+        tests:
+          - not_null
+
+  - name: stg_grid_demand
+    description: >
+      Real-time grid load (5-minute cadence) from ERCOT, CAISO, and PJM.
+      Zero and negative demand values are excluded.
+    columns:
+      - name: time
+        tests:
+          - not_null
+      - name: region_id
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['ERCOT', 'CAISO', 'PJM', 'EIA_US']
+      - name: demand_mw
+        tests:
+          - not_null
+      - name: source
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['eia']
+
+  - name: stg_nuclear_status
+    description: >
+      Daily per-reactor NRC power output. Filtered to valid power_pct
+      readings (0–110%). Reactors with no power reading are excluded.
+    columns:
+      - name: time
+        tests:
+          - not_null
+      - name: unit_name
+        tests:
+          - not_null
+      - name: power_pct
+        tests:
+          - not_null
+
+  - name: stg_seismic
+    description: >
+      USGS seismic events M1.0+. region_id is nullable — only set when
+      the event is near a monitored grid region.
+    columns:
+      - name: time
+        tests:
+          - not_null
+      - name: event_id
+        tests:
+          - not_null
+      - name: magnitude
+        tests:
+          - not_null

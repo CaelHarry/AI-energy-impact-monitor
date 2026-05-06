@@ -25,6 +25,7 @@ dbt/target/
 dbt/dbt_packages/
 dbt/logs/
 dbt/.dbt/
+dbt/.user.yml
 
 # ── Python ───────────────────────────────────────────────────
 __pycache__/

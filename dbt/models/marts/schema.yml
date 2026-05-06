@@ -1,0 +1,154 @@
+version: 2
+
+models:
+  - name: mart_regional_hourly_metrics
+    description: >
+      Primary fact table. One row per (region_id, hour). All key hourly signals:
+      demand (with spike detection), weather, AQI (PM2.5 + Ozone), generation
+      mix (percentages and individual fuel MWh), and peak_period classification.
+      Most dashboard charts source from this table. Answers questions 3 and 4.
+    columns:
+      - name: hour
+        description: "UTC timestamp truncated to the hour."
+        tests:
+          - not_null
+      - name: region_id
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['ERCOT', 'CAISO', 'PJM', 'EIA_US']
+      - name: demand_avg_mw
+        tests:
+          - not_null
+      - name: is_demand_spike
+        tests:
+          - not_null
+      - name: peak_period
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['peak', 'off_peak']
+
+  - name: mart_demand_spike_events
+    description: >
+      One row per demand spike hour (is_demand_spike = true). Includes the
+      PM2.5 AQI at spike time and 2 hours later (pm25_aqi_delta_2h). Also
+      includes apparent_temperature_c alongside temperature_c for comparing
+      which predictor correlates more strongly with demand spikes. Directly
+      answers questions 1 and 7.
+    columns:
+      - name: spike_hour
+        description: "UTC hour in which the demand spike was detected."
+        tests:
+          - not_null
+      - name: region_id
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['ERCOT', 'CAISO', 'PJM', 'EIA_US']
+      - name: demand_avg_mw
+        tests:
+          - not_null
+
+  - name: mart_clean_energy_summary
+    description: >
+      Daily rollup per (region_id, peak_period). Average clean/fossil/nuclear
+      percentages and total MWh generated. hour_count indicates completeness
+      (peak should be 7, off_peak should be 17). Answers question 4.
+    columns:
+      - name: day
+        description: "UTC date (midnight) for the aggregation bucket."
+        tests:
+          - not_null
+      - name: region_id
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['ERCOT', 'CAISO', 'PJM', 'EIA_US']
+      - name: peak_period
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['peak', 'off_peak']
+      - name: hour_count
+        tests:
+          - not_null
+
+  - name: mart_nuclear_aqi_impact
+    description: >
+      Grouped by nuclear output quartile (NTILE 4, ascending) per region.
+      If nuclear output reduces AQI, avg_pm25_aqi should decrease as
+      nuclear_quartile increases from 1 to 4. fossil_pct and temperature_c
+      are included as confounders. Answers question 2.
+    columns:
+      - name: region_id
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['ERCOT', 'CAISO', 'PJM', 'EIA_US']
+      - name: nuclear_quartile
+        description: "1 = lowest nuclear output quartile, 4 = highest."
+        tests:
+          - not_null
+      - name: hour_count
+        tests:
+          - not_null
+
+  - name: mart_demand_baseline_trend
+    description: >
+      Monthly average and peak demand per region with month-over-month delta
+      and percentage change. The primary evidence for or against sustained
+      AI-driven demand growth in data-center-dense regions. Answers question 5.
+    columns:
+      - name: month
+        description: "UTC month (midnight of first day of the month)."
+        tests:
+          - not_null
+      - name: region_id
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['ERCOT', 'CAISO', 'PJM', 'EIA_US']
+      - name: avg_demand_mw
+        tests:
+          - not_null
+      - name: hour_count
+        description: "Observed hours in this month. Full month = ~720 hours."
+        tests:
+          - not_null
+
+  - name: mart_seismic_nuclear_impact
+    description: >
+      One row per M3.0+ seismic event near a monitored region. Compares average
+      nuclear output 7 days before vs 7 days after the event. nuclear_pct_delta
+      (negative = output dropped after the quake) is the key signal. The only
+      model that gives analytical meaning to seismic_raw data. Answers question 6.
+    columns:
+      - name: event_date
+        description: "Date of the seismic event."
+        tests:
+          - not_null
+      - name: region_id
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['ERCOT', 'CAISO', 'PJM', 'EIA_US']
+      - name: magnitude
+        tests:
+          - not_null
+
+  - name: mart_renewable_backup
+    description: >
+      Hourly renewable generation and fossil backup per region. Includes
+      hour-over-hour deltas for solar, wind, and natural gas — surfaces the
+      peaker activation mechanism when renewables drop. cloud_cover_pct is
+      the leading indicator for solar intermittency events. Answers question 8.
+    columns:
+      - name: hour
+        tests:
+          - not_null
+      - name: region_id
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['ERCOT', 'CAISO', 'PJM', 'EIA_US']

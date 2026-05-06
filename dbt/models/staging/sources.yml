@@ -1,0 +1,171 @@
+version: 2
+
+sources:
+  - name: raw
+    description: >
+      Raw hypertables and lookup tables in the public schema of the pipeline
+      database. All time-series tables are TimescaleDB hypertables partitioned
+      on the `time` column. Data is ingested by Airflow DAGs on independent
+      schedules. Two continuous aggregates (aqi_hourly, grid_demand_hourly)
+      are maintained automatically by TimescaleDB.
+    schema: public
+    database: pipeline
+
+    tables:
+      - name: grid_regions
+        description: >
+          Reference lookup table. One row per grid operator region (ERCOT, CAISO,
+          PJM, EIA_US). Every time-series row links back here via region_id.
+        columns:
+          - name: region_id
+            description: "Primary key. Values: ERCOT, CAISO, PJM, EIA_US."
+
+      - name: aqi_raw
+        description: >
+          AirNow (EPA) station-level AQI readings. One row per station per
+          parameter (PM2.5, OZONE, PM10, CO, NO2, SO2) per ~30-minute interval.
+          Ingested via the /aq/data/ bounding-box API. Updated every 30 minutes.
+        freshness:
+          warn_after: {count: 2, period: hour}
+          error_after: {count: 4, period: hour}
+        loaded_at_field: ingested_at
+        columns:
+          - name: time
+            description: "Observation timestamp (UTC). Hypertable partition key."
+          - name: region_id
+            description: "FK to grid_regions."
+          - name: station_id
+            description: "AirNow/EPA monitoring station code (FullAQSCode)."
+          - name: parameter
+            description: "Pollutant measured. Values: PM2.5, PM10, OZONE, CO, NO2, SO2."
+          - name: aqi
+            description: "Air Quality Index (0–500 scale). -1 sentinel means no data."
+
+      - name: weather_raw
+        description: >
+          Open-Meteo hourly weather per region centroid. Includes both
+          observations (is_forecast=false) and short-range forecasts.
+          Updated every hour.
+        freshness:
+          warn_after: {count: 2, period: hour}
+          error_after: {count: 6, period: hour}
+        loaded_at_field: ingested_at
+        columns:
+          - name: time
+            description: "Observation or forecast hour (UTC)."
+          - name: region_id
+            description: "FK to grid_regions."
+          - name: temperature_2m
+            description: "Air temperature at 2m height, degrees Celsius."
+          - name: apparent_temperature
+            description: "Feels-like / heat index temperature, degrees Celsius."
+          - name: is_forecast
+            description: "True if this is a forecast row, false if an observation."
+
+      - name: grid_generation_raw
+        description: >
+          EIA hourly electricity generation mix by fuel type per region.
+          nuclear_pct, fossil_pct, and clean_pct are pre-computed at ingest.
+          Updated every hour.
+        freshness:
+          warn_after: {count: 3, period: hour}
+          error_after: {count: 6, period: hour}
+        loaded_at_field: ingested_at
+        columns:
+          - name: time
+            description: "Generation hour (UTC)."
+          - name: region_id
+            description: "FK to grid_regions."
+          - name: total_mwh
+            description: "Total generation across all fuel types in MWh."
+          - name: nuclear_pct
+            description: "Nuclear share of total generation (%)."
+          - name: fossil_pct
+            description: "Coal + natural gas share of total generation (%)."
+          - name: clean_pct
+            description: "Nuclear + wind + solar + hydro share of total generation (%)."
+
+      - name: grid_demand_raw
+        description: >
+          Real-time grid load in MW from ERCOT, CAISO, and PJM. Updated every
+          5 minutes per region. Primary signal for demand spike detection.
+        freshness:
+          warn_after: {count: 30, period: minute}
+          error_after: {count: 2, period: hour}
+        loaded_at_field: ingested_at
+        columns:
+          - name: time
+            description: "Reading timestamp (UTC), truncated to the minute."
+          - name: region_id
+            description: "FK to grid_regions."
+          - name: demand_mw
+            description: "Actual instantaneous grid load in megawatts."
+          - name: forecast_mw
+            description: "Operator day-ahead forecast in MW. Populated for PJM only."
+          - name: source
+            description: "Originating grid operator: ercot, caiso, or pjm."
+
+      - name: nuclear_status_raw
+        description: >
+          NRC daily reactor power output as % of licensed thermal capacity.
+          One row per reactor unit per day. region_id is nullable for reactors
+          outside the ERCOT/CAISO/PJM state mapping. Updated daily.
+        freshness:
+          warn_after: {count: 25, period: hour}
+          error_after: {count: 48, period: hour}
+        loaded_at_field: ingested_at
+        columns:
+          - name: time
+            description: "Report date truncated to midnight UTC (daily cadence)."
+          - name: unit_name
+            description: "NRC reactor unit identifier, e.g. VOGTLE 3."
+          - name: power_pct
+            description: "Output as % of licensed thermal capacity (0–110%)."
+          - name: region_id
+            description: "Nullable FK. Null for reactors in non-monitored states."
+
+      - name: seismic_raw
+        description: >
+          USGS M1.0+ seismic events globally. region_id is set only when the
+          event epicenter falls within a monitored grid region bounding box.
+          Updated every 10 minutes.
+        freshness:
+          warn_after: {count: 30, period: minute}
+          error_after: {count: 2, period: hour}
+        loaded_at_field: ingested_at
+        columns:
+          - name: time
+            description: "Event origin time (UTC)."
+          - name: event_id
+            description: "USGS unique event identifier."
+          - name: magnitude
+            description: "Seismic moment magnitude (Richter-equivalent)."
+          - name: region_id
+            description: "Nullable FK. Set when event is near a monitored region."
+
+      - name: aqi_hourly
+        description: >
+          TimescaleDB continuous aggregate. Hourly AQI summary per
+          (region_id, parameter), auto-refreshed by TimescaleDB every hour.
+          Source: aqi_raw. Columns: bucket, region_id, parameter,
+          aqi_avg, aqi_max, aqi_min, reading_count.
+        columns:
+          - name: bucket
+            description: "1-hour time bucket (UTC)."
+          - name: region_id
+          - name: parameter
+          - name: aqi_avg
+          - name: aqi_max
+
+      - name: grid_demand_hourly
+        description: >
+          TimescaleDB continuous aggregate. Hourly demand summary per region,
+          auto-refreshed every hour. Source: grid_demand_raw.
+          Columns: bucket, region_id, demand_avg_mw, demand_max_mw, forecast_avg_mw.
+        columns:
+          - name: bucket
+            description: "1-hour time bucket (UTC)."
+          - name: region_id
+          - name: demand_avg_mw
+          - name: demand_max_mw
+          - name: forecast_avg_mw

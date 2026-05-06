@@ -46,13 +46,9 @@ x-airflow-common: &airflow-common
     # Free key: https://www.eia.gov/opendata/register.php
     EIA_API_KEY: ${EIA_API_KEY}
 
-    # ── Regional grid operators (public JSON/REST feeds) ───────
-    # ERCOT (Texas)
-    ERCOT_BASE_URL: "https://www.ercot.com/api/1/services/read"
-    # CAISO (California)
+    # ── Regional grid operators (demand via EIA Form 930, uses EIA_API_KEY) ──
+    # CAISO (California) — also used for direct OASIS queries
     CAISO_BASE_URL: "https://oasis.caiso.com/oasisapi/SingleZip"
-    # PJM (Mid-Atlantic / data-center corridor)
-    PJM_BASE_URL: "https://dataminer2.pjm.com/feed"
 
     # ── NRC — nuclear reactor daily status (public) ────────────
     NRC_STATUS_URL: "https://www.nrc.gov/reading-rm/doc-collections/event-status/reactor-status/powerreactorstatusforlast365days.txt"
@@ -151,6 +147,7 @@ services:
   dbt:
     image: ghcr.io/dbt-labs/dbt-postgres:1.8.latest
     container_name: pipeline-dbt
+    working_dir: /dbt
     environment:
       DBT_PROFILES_DIR: /dbt
       PIPELINE_DB_HOST: postgres
@@ -160,13 +157,12 @@ services:
       PIPELINE_DB_PASSWORD: ${PIPELINE_DB_PASSWORD}
     volumes:
       - ./dbt:/dbt
-      - ./dbt/profiles.yml:/dbt/profiles.yml
     networks:
       - pipeline-net
     depends_on:
       postgres:
         condition: service_healthy
-    command: ["dbt", "debug"]
+    command: ["debug"]
     restart: "no"
 
   # ── 6. pgAdmin ───────────────────────────────────────────────

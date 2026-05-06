@@ -97,6 +97,17 @@ class GridDemandRow(BaseModel):
     forecast_mw: Optional[float] = None
     source: str
 
+    @field_validator("time", mode="before")
+    @classmethod
+    def parse_eia_period(cls, v):
+        if isinstance(v, str):
+            for fmt in ("%Y-%m-%dT%H", "%Y-%m-%dT%H:%M", "%Y-%m-%d"):
+                try:
+                    return datetime.strptime(v, fmt).replace(tzinfo=timezone.utc)
+                except ValueError:
+                    continue
+        return v
+
     def to_db(self) -> dict:
         return self.model_dump()
 
@@ -115,7 +126,7 @@ class NuclearStatusRow(BaseModel):
     def parse_nrc_date(cls, v):
         if isinstance(v, str):
             v = v.strip()
-            for fmt in ("%m/%d/%Y", "%Y-%m-%d"):
+            for fmt in ("%m/%d/%Y %I:%M:%S %p", "%m/%d/%Y", "%Y-%m-%d"):
                 try:
                     return datetime.strptime(v, fmt).replace(tzinfo=timezone.utc)
                 except ValueError:

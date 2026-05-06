@@ -1,15 +1,14 @@
 # airflow/dags/dag_grid_demand.py
 #
-# Fetches real-time grid load from ERCOT, CAISO, and PJM.
-# Schedule: every 5 minutes
+# Fetches hourly grid demand (load) for ERCOT, CAISO, and PJM from EIA Form 930.
+# Schedule: 7 minutes past each hour (EIA publishes with ~1 hour lag)
 #
-# Sources (all public, no auth required):
-#   ERCOT: https://www.ercot.com/api/1/services/read/dashboards/current-grid-conditions
-#   CAISO: https://oasis.caiso.com/oasisapi/SingleZip (RTLOAD report)
-#   PJM:   https://dataminer2.pjm.com/feed/inst_load/export
+# Source: https://api.eia.gov/v2/electricity/rto/region-data/data/
+# Requires: EIA_API_KEY in environment
 
 import logging
-from datetime import datetime, timezone
+import os
+from datetime import datetime, timedelta, timezone
 
 import httpx
 from airflow.decorators import dag, task
@@ -20,165 +19,91 @@ from pipeline.models import GridDemandRow
 
 log = logging.getLogger(__name__)
 
+EIA_API_KEY = os.environ.get("EIA_API_KEY", "")
+BASE_URL    = "https://api.eia.gov/v2/electricity/rto/region-data/data/"
 
-# ── ERCOT ─────────────────────────────────────────────────────────
+REGION_MAP = {
+    "ERCO": "ERCOT",
+    "CISO": "CAISO",
+    "PJM":  "PJM",
+}
 
-def fetch_ercot(client: httpx.Client) -> list[dict]:
-    """
-    ERCOT grid conditions dashboard API.
-    Returns current system-wide load in MW.
-    """
-    url = "https://www.ercot.com/api/1/services/read/dashboards/current-grid-conditions"
-    try:
-        resp = client.get(url, timeout=20)
-        resp.raise_for_status()
-        data = resp.json()
-
-        # ERCOT response structure varies — extract load from known keys
-        load_mw = (
-            data.get("currentLoad")
-            or data.get("systemLoad")
-            or data.get("load")
-        )
-        if load_mw is None:
-            log.warning("ERCOT: could not find load value in response")
-            return []
-
-        return [{
-            "time":      datetime.now(timezone.utc).replace(second=0, microsecond=0),
-            "region_id": "ERCOT",
-            "demand_mw": float(load_mw),
-            "source":    "ercot",
-        }]
-    except Exception as e:
-        log.error("ERCOT fetch failed: %s", e)
-        return []
-
-
-# ── CAISO ─────────────────────────────────────────────────────────
-
-def fetch_caiso(client: httpx.Client) -> list[dict]:
-    """
-    CAISO OASIS API — real-time system load (RTLOAD).
-    """
-    now_utc = datetime.now(timezone.utc)
-    start   = now_utc.strftime("%Y%m%dT%H:%M+0000")
-    end     = now_utc.strftime("%Y%m%dT%H:%M+0000")
-
-    url = "https://oasis.caiso.com/oasisapi/SingleZip"
-    params = {
-        "queryname":    "RT_LOAD",
-        "startdatetime": start,
-        "enddatetime":   end,
-        "market_run_id": "RTM",
-        "resultformat":  "6",   # JSON
-    }
-    try:
-        resp = client.get(url, params=params, timeout=20)
-        resp.raise_for_status()
-        data = resp.json()
-
-        rows = data.get("OASISReport", {}).get("MessagePayload", {}).get("RTO", {})
-        load_data = rows.get("LOAD_VALUES", {}).get("LOAD", [])
-
-        if isinstance(load_data, dict):
-            load_data = [load_data]
-
-        results = []
-        for item in load_data:
-            try:
-                results.append({
-                    "time":      datetime.now(timezone.utc).replace(second=0, microsecond=0),
-                    "region_id": "CAISO",
-                    "demand_mw": float(item.get("MW", 0)),
-                    "source":    "caiso",
-                })
-            except (ValueError, TypeError):
-                continue
-        return results
-    except Exception as e:
-        log.error("CAISO fetch failed: %s", e)
-        return []
-
-
-# ── PJM ───────────────────────────────────────────────────────────
-
-def fetch_pjm(client: httpx.Client) -> list[dict]:
-    """
-    PJM DataMiner2 API — instantaneous load.
-    """
-    url = "https://dataminer2.pjm.com/feed/inst_load/export"
-    params = {"startRow": 1, "endRow": 1}
-    try:
-        resp = client.get(url, params=params, timeout=20)
-        resp.raise_for_status()
-        data = resp.json()
-
-        items = data if isinstance(data, list) else data.get("items", [])
-        results = []
-        for item in items[:1]:
-            try:
-                results.append({
-                    "time":        datetime.now(timezone.utc).replace(second=0, microsecond=0),
-                    "region_id":   "PJM",
-                    "demand_mw":   float(item.get("actual_load", item.get("load", 0))),
-                    "forecast_mw": float(item.get("forecast_load", 0)) or None,
-                    "source":      "pjm",
-                })
-            except (ValueError, TypeError):
-                continue
-        return results
-    except Exception as e:
-        log.error("PJM fetch failed: %s", e)
-        return []
-
-
-# ── DAG ───────────────────────────────────────────────────────────
 
 @dag(
     dag_id="dag_grid_demand",
-    schedule="*/5 * * * *",
+    schedule="7 * * * *",
     start_date=datetime(2024, 1, 1, tzinfo=timezone.utc),
     catchup=False,
-    tags=["grid", "demand", "ercot", "caiso", "pjm"],
+    tags=["grid", "demand", "ercot", "caiso", "pjm", "eia"],
     doc_md="""
-    ### Grid demand — ERCOT / CAISO / PJM
-    Fetches real-time grid load in MW from all three major grid operators.
-    Runs every 5 minutes. Each operator is fetched independently so a
-    single operator failure does not block the others.
+    ### Grid demand — ERCOT / CAISO / PJM via EIA Form 930
+    Fetches hourly electricity demand (load) in MWh for all three regions
+    from the EIA API v2. Pulls a 3-hour window to catch late-arriving corrections.
+    EIA publishes with ~1 hour lag; runs at 7 minutes past each hour.
     Written to: `grid_demand_raw`
     """,
 )
 def dag_grid_demand():
 
     @task()
-    def fetch_all_operators() -> list[dict]:
-        """
-        Fetch demand from all three operators in a single HTTP session.
-        Individual operator failures are caught and logged — they return []
-        so the DAG continues with whatever data was successfully fetched.
-        """
-        rows = []
-        with httpx.Client(timeout=20, follow_redirects=True) as client:
-            rows += fetch_ercot(client)
-            rows += fetch_caiso(client)
-            rows += fetch_pjm(client)
+    def fetch_demand() -> list[dict]:
+        """Fetch the last 3 hours of demand data for ERCOT, CAISO, and PJM."""
+        if not EIA_API_KEY:
+            raise RuntimeError("EIA_API_KEY is not set in the environment")
 
-        log.info("fetched %d demand rows across all operators", len(rows))
+        now   = datetime.now(timezone.utc)
+        start = (now - timedelta(hours=3)).strftime("%Y-%m-%dT%H")
+
+        params = {
+            "api_key":              EIA_API_KEY,
+            "frequency":            "hourly",
+            "data[0]":              "value",
+            "facets[respondent][]": list(REGION_MAP.keys()),
+            "facets[type][]":       ["D"],   # D = Demand
+            "start":                start,
+            "sort[0][column]":      "period",
+            "sort[0][direction]":   "desc",
+            "length":               50,
+            "offset":               0,
+        }
+
+        log.info("fetching EIA demand from %s", start)
+        with httpx.Client(timeout=30) as client:
+            resp = client.get(BASE_URL, params=params)
+            resp.raise_for_status()
+
+        rows = resp.json().get("response", {}).get("data", [])
+        log.info("received %d EIA demand rows", len(rows))
         return rows
 
     @task()
     def validate(raw_rows: list[dict]) -> list[dict]:
-        """Validate each demand row with the GridDemandRow pydantic model."""
+        """Parse and validate each EIA demand row."""
         rows = []
         bad  = 0
-        for raw in raw_rows:
-            try:
-                row = GridDemandRow(**raw)
-                rows.append(row.to_db())
-            except (ValidationError, Exception) as e:
-                log.warning("skipping demand row %s: %s", raw, e)
+        for row in raw_rows:
+            respondent = row.get("respondent", "")
+            region_id  = REGION_MAP.get(respondent)
+            period     = row.get("period", "")
+            value      = row.get("value")
+
+            if not region_id or not period or value is None:
                 bad += 1
+                continue
+
+            try:
+                raw = {
+                    "time":      period,
+                    "region_id": region_id,
+                    "demand_mw": float(value),
+                    "source":    "eia",
+                }
+                validated = GridDemandRow(**raw)
+                rows.append(validated.to_db())
+            except (ValidationError, Exception) as e:
+                log.warning("skipping demand row %s: %s", row, e)
+                bad += 1
+
         log.info("validated %d rows, %d skipped", len(rows), bad)
         return rows
 
@@ -194,7 +119,7 @@ def dag_grid_demand():
             conflict_cols=["time", "region_id", "source"],
         )
 
-    raw   = fetch_all_operators()
+    raw   = fetch_demand()
     valid = validate(raw)
     load(valid)
 

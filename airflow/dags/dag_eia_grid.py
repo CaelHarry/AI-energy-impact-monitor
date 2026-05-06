@@ -68,7 +68,7 @@ def dag_eia_grid():
             raise RuntimeError("EIA_API_KEY is not set in the environment")
 
         now   = datetime.now(timezone.utc)
-        start = (now - timedelta(hours=3)).strftime("%Y-%m-%dT%H")
+        start = (now - timedelta(hours=24)).strftime("%Y-%m-%dT%H")
 
         params = {
             "api_key":              EIA_API_KEY,
@@ -78,7 +78,7 @@ def dag_eia_grid():
             "start":                start,
             "sort[0][column]":      "period",
             "sort[0][direction]":   "desc",
-            "length":               200,
+            "length":               700,
             "offset":               0,
         }
 
@@ -105,7 +105,7 @@ def dag_eia_grid():
         for row in raw_rows:
             period     = row.get("period", "")
             respondent = row.get("respondent", "")
-            fuel_type  = row.get("type-name", row.get("fueltype", ""))
+            fuel_type  = row.get("fueltype", "")
             value      = row.get("value")
             region_id  = REGION_MAP.get(respondent)
 

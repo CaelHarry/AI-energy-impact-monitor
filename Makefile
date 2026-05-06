@@ -77,12 +77,12 @@ diagram:
 
 # ── dbt ──────────────────────────────────────────────────────────
 dbt-run:
-	docker compose run --rm dbt dbt run
+	docker compose run --rm dbt run
 
 dbt-test:
-	docker compose run --rm dbt dbt test
+	docker compose run --rm dbt test
 
 dbt-docs:
-	docker compose run --rm -p 8081:8080 dbt \
-		bash -c "dbt docs generate && dbt docs serve --port 8080"
+	docker compose run --rm -p 8081:8080 --entrypoint sh dbt \
+		-c "dbt docs generate && dbt docs serve --port 8080"
 	@echo "dbt docs → http://localhost:8081"
