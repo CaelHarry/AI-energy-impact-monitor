@@ -15,6 +15,15 @@ clean-targets:
   - "target"
   - "dbt_packages"
 
+seeds:
+  pipeline:
+    datacenter_facilities:
+      +column_types:
+        lat: float8
+        lon: float8
+        capacity_mw_est: float8
+        year_opened: integer
+
 models:
   pipeline:
     staging:

@@ -3,7 +3,7 @@
 #  Usage: make <target>
 # =================================================================
 
-.PHONY: help up down reset logs schema diagram dbt-run dbt-test dbt-docs
+.PHONY: help up down reset logs schema diagram dbt-run dbt-test dbt-docs dbt-seed
 
 # ── Default ───────────────────────────────────────────────────────
 help:
@@ -24,6 +24,7 @@ help:
 	@echo "    make dbt-run     Run all dbt models"
 	@echo "    make dbt-test    Run all dbt tests"
 	@echo "    make dbt-docs    Generate and serve dbt documentation"
+	@echo "    make dbt-seed    Load static seed data (datacenter_facilities)"
 	@echo ""
 
 # ── Stack ─────────────────────────────────────────────────────────
@@ -86,3 +87,7 @@ dbt-docs:
 	docker compose run --rm -p 8081:8080 --entrypoint sh dbt \
 		-c "dbt docs generate && dbt docs serve --port 8080"
 	@echo "dbt docs → http://localhost:8081"
+
+dbt-seed:
+	docker compose run --rm dbt seed
+	@echo "Seed data loaded into marts.datacenter_facilities"

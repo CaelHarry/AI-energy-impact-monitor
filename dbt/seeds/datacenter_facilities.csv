@@ -1,0 +1,17 @@
+name,operator,facility_type,lat,lon,region_id,capacity_mw_est,year_opened,source
+Google Midlothian Campus,Google,hyperscale,32.4752,-97.0103,ERCOT,300,2019,Google blog announcement 2019
+Meta Fort Worth Campus,Meta,hyperscale,32.7554,-97.4168,ERCOT,200,2021,Meta sustainability report
+Microsoft Azure San Antonio,Microsoft,hyperscale,29.4241,-98.4936,ERCOT,150,2007,Microsoft news releases
+Amazon AWS San Antonio,Amazon,hyperscale,29.3853,-98.5611,ERCOT,100,2016,Commercial real estate filings (public)
+CyrusOne Dallas Campus,CyrusOne,colocation,32.9029,-97.0403,ERCOT,120,2010,CyrusOne investor presentations
+Equinix Silicon Valley Campus,Equinix,colocation,37.3328,-121.8939,CAISO,130,2000,Equinix corporate filings
+Meta Santa Clara,Meta,hyperscale,37.3947,-121.9625,CAISO,60,2015,Meta sustainability report
+Google Sunnyvale,Google,hyperscale,37.3688,-122.0363,CAISO,80,2006,Google infrastructure blog
+Digital Realty Silicon Valley,Digital Realty,colocation,37.3451,-121.9075,CAISO,50,2012,Digital Realty corporate filings
+Amazon AWS Ashburn (us-east-1),Amazon,hyperscale,39.0438,-77.4874,PJM,500,2006,AWS announcements; Loudoun County EDA
+Microsoft Azure Sterling,Microsoft,hyperscale,39.0015,-77.4291,PJM,300,2008,Microsoft news releases
+Google Ashburn,Google,hyperscale,39.0438,-77.4500,PJM,200,2010,Google sustainability report
+Meta Ashburn,Meta,hyperscale,39.0353,-77.4800,PJM,150,2013,Meta corporate announcements
+Equinix Ashburn Campus,Equinix,colocation,39.0489,-77.4762,PJM,200,1999,Equinix corporate filings; Loudoun County EDA
+Amazon AWS Manassas,Amazon,hyperscale,38.7509,-77.4753,PJM,200,2014,Prince William County filings (public)
+Microsoft Boydton,Microsoft,hyperscale,36.6648,-78.3892,PJM,150,2010,Microsoft news releases

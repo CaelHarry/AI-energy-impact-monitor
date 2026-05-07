@@ -116,6 +116,21 @@ Six raw hypertables (time-partitioned by TimescaleDB) all reference a central `g
 | `nuclear_status_raw` | NRC | Daily |
 | `seismic_raw` | USGS | Every 10 min |
 
+A separate static reference table, `marts.datacenter_facilities`, maps known hyperscale and colocation data center campuses to their grid region. This is loaded once via `make dbt-seed` rather than a live DAG, since facility locations don't change on a pipeline cadence.
+
+| Column | Type | Description |
+|---|---|---|
+| `name` | text | Facility name |
+| `operator` | text | Operating company (Google, Amazon, Equinix, etc.) |
+| `facility_type` | text | `hyperscale`, `colocation`, or `enterprise` |
+| `lat` / `lon` | float8 | Approximate facility coordinates |
+| `region_id` | text | Grid region — ERCOT, CAISO, or PJM |
+| `capacity_mw_est` | float8 | Estimated MW capacity — not always publicly disclosed; treat as order-of-magnitude |
+| `year_opened` | integer | Approximate year the facility came online |
+| `source` | text | Public source the entry is based on |
+
+The seed covers 16 facilities across the three regions: 5 in ERCOT (Texas corridor), 4 in CAISO (Bay Area / Silicon Valley), and 7 in PJM (Northern Virginia cluster). To add more facilities, edit [`dbt/seeds/datacenter_facilities.csv`](dbt/seeds/datacenter_facilities.csv) and re-run `make dbt-seed`.
+
 ---
 
 ## Getting started
@@ -276,6 +291,7 @@ make reset       # Full teardown including data — destructive
 make logs        # Tail all container logs
 make dbt-run     # Run all dbt models
 make dbt-test    # Run dbt data quality tests
+make dbt-seed    # Load static reference data (datacenter_facilities)
 ```
 
 Apply or re-apply the database schema:

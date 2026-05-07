@@ -85,6 +85,7 @@ desktop.ini
 CLAUDE.md
 # ── Data files (keep schema, not raw data) ────────────────────
 *.csv
+!dbt/seeds/*.csv
 *.parquet
 *.json.gz
 data/raw/
