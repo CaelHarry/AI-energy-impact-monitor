@@ -342,6 +342,32 @@ The dashboard has two sections:
 
 **Reading the AQI Δ 2h column**: a positive value means air quality worsened in the 2 hours after the demand spike — the primary signal of gas peaker activation. A negative value means air quality improved (e.g. wind picked up, or the spike was met by clean sources). High fossil % rows with high AQI Δ 2h are the strongest evidence of peaker-driven pollution.
 
+## Data Center Grid Footprint dashboard
+
+A fifth dashboard auto-provisions under the title **Data Center Grid Footprint**. It displays static reference data from `marts.datacenter_facilities` (loaded via `dbt seed`) so it has no auto-refresh and no time filter — all 16 tracked facilities are always visible.
+
+The dashboard has three sections:
+
+**Data Center Locations** — full-width geomap. Each facility is plotted as a circle at its approximate coordinates. Marker size scales linearly with `capacity_mw_est` (min 8 px → max 40 px), so the two largest facilities (Amazon AWS Ashburn at 500 MW and Google Midlothian at 300 MW) are immediately visually dominant. Hovering a marker shows a details tooltip with name, operator, type, region, capacity, and year opened. The three geographic clusters make regional affiliation obvious without color coding:
+
+- **Bottom centre** — Texas corridor (ERCOT): Midlothian, Fort Worth, Dallas, San Antonio
+- **Left coast** — Bay Area (CAISO): Sunnyvale, Santa Clara, Santa Clara, Fremont
+- **Top right** — Northern Virginia (PJM): Ashburn cluster (6 facilities), Boydton
+
+**Regional Capacity Summary** — 3 stat cards (ERCOT / CAISO / PJM) showing the total estimated MW tracked in each region. These are order-of-magnitude estimates from public filings and news releases, not metered output. PJM dominates, reflecting the Ashburn hyperscale concentration.
+
+**Facility Directory** — full-width sortable table with all 16 facilities. Region cells are color-mapped (orange = ERCOT, blue = CAISO, green = PJM). Capacity cells use a green → yellow → orange → red threshold (100 / 200 / 400 MW breakpoints) to highlight the largest consumers at a glance.
+
+### Capacity estimates and data quality
+
+The `capacity_mw_est` column is sourced from public investor presentations, county economic development filings, sustainability reports, and news releases. Data centers rarely disclose exact power draw, so treat these figures as order-of-magnitude indicators. The Equinix campus figures reflect total campus capacity, not a single building. AWS Ashburn represents the flagship us-east-1 campus; total AWS Northern Virginia capacity is substantially higher across multiple campuses not individually tracked here.
+
+To add or update facilities, edit [`dbt/seeds/datacenter_facilities.csv`](dbt/seeds/datacenter_facilities.csv) and re-run `dbt seed`:
+
+```bash
+docker compose run --rm dbt seed
+```
+
 ## Build phases
 
 - [x] Phase 1 — Docker Compose infrastructure
@@ -353,6 +379,7 @@ The dashboard has two sections:
 - [x] Phase 5.5 — Nuclear Fleet Status dashboard (capacity factors, reactor table, 30-day trend)
 - [x] Phase 5.6 — Temperature vs Grid Demand Correlation dashboard (dual Y-axis, shared crosshair)
 - [x] Phase 5.7 — Demand Spike Events dashboard (spike log, AQI delta, 30-day summary cards)
+- [x] Phase 6 — Data Center Grid Footprint dashboard (geomap, capacity cards, facility directory)
 
 ## Useful commands
 
