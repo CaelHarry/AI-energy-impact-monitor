@@ -22,11 +22,24 @@ log = logging.getLogger(__name__)
 EIA_API_KEY = os.environ.get("EIA_API_KEY", "")
 BASE_URL    = "https://api.eia.gov/v2/electricity/rto/fuel-type-data/data/"
 
-# EIA respondent codes that map to our grid regions
+# EIA respondent codes that map to our grid regions.
+#
+# CAISO (CISO) covers most of California but excludes the Los Angeles
+# Department of Water and Power (LDWP), which operates its own balancing
+# authority and accounts for ~20 % of California's total load. The main
+# Silicon Valley data center cluster (PG&E territory) is inside CAISO, so
+# the exclusion is acceptable for the AI demand thesis — but it means LA
+# Basin heat events won't produce a matching demand spike in this data.
+# To add full California coverage, include "LDWP": "LADWP" here and add a
+# corresponding entry to the AirNow bounding boxes in dag_airnow.py.
+#
+# PJM is the most important region for this project: Northern Virginia
+# (Ashburn/Loudoun County) hosts ~35 % of global colocation capacity and
+# sits squarely inside PJM's balancing authority with no coverage gaps.
 REGION_MAP = {
-    "ERCO": "ERCOT",   # ERCOT
-    "CISO": "CAISO",   # CAISO
-    "PJM":  "PJM",     # PJM
+    "ERCO": "ERCOT",   # ERCOT — Texas; covers Austin/Dallas data center corridor
+    "CISO": "CAISO",   # CAISO — California (excl. LADWP/LA); covers Silicon Valley
+    "PJM":  "PJM",     # PJM — Mid-Atlantic/Midwest; covers Northern Virginia cluster
 }
 
 # EIA fuel type codes → our column names

@@ -24,10 +24,25 @@ BASE_URL = "https://www.airnowapi.org/aq/data/"
 PARAMETERS = "PM25,OZONE,PM10,CO,NO2,SO2"
 
 # Bounding boxes: "minLon,minLat,maxLon,maxLat"
+#
+# NOTE — CAISO bounding box vs grid coverage mismatch:
+# The box below covers all of California, including the Los Angeles Basin.
+# However, the grid demand and generation data (dag_eia_grid.py) only covers
+# CAISO, which excludes the Los Angeles Department of Water and Power (LADWP).
+# This means LA Basin AQI readings are included here but have no matching
+# demand signal in the grid tables. During LA heat events, AQI may spike
+# within this bounding box without a corresponding CAISO demand increase,
+# which can weaken demand-AQI correlations for the California region.
+# The Silicon Valley data center cluster (the primary California focus of
+# this project) is inside CAISO territory, so the mismatch is an acceptable
+# limitation rather than a fundamental flaw.
+#
+# PJM bounding box covers Northern Virginia (Ashburn/Loudoun County), the
+# world's largest data center cluster, with no equivalent coverage gap.
 REGION_BBOXES: dict[str, str] = {
-    "ERCOT": "-107.0,25.8,-93.5,36.5",    # Texas
-    "CAISO": "-124.5,32.5,-114.0,42.0",   # California
-    "PJM":   "-92.0,35.0,-74.0,47.0",     # Mid-Atlantic / Midwest
+    "ERCOT": "-107.0,25.8,-93.5,36.5",    # Texas (full ERCOT footprint)
+    "CAISO": "-124.5,32.5,-114.0,42.0",   # California (incl. LA Basin — see note above)
+    "PJM":   "-92.0,35.0,-74.0,47.0",     # Mid-Atlantic / Midwest (incl. N. Virginia)
 }
 
 

@@ -58,6 +58,41 @@ Grafana               ← pipeline health monitoring (auto-provisioned)
 - Which grid regions (ERCOT / CAISO / PJM) show the strongest correlation between AI infrastructure growth and grid stress?
 - How does the clean energy mix change during peak vs off-peak hours across different regions?
 
+## Project thesis and analytical scope
+
+The central claim this project tests: **AI data centers act as a persistent, weather-insensitive baseload on the grid**. Unlike residential demand (which spikes in summer heat) or industrial demand (which tracks business hours), data centers run continuously at high utilisation. When a region hosts a large concentration of data center capacity, its grid floor — the minimum demand even at 3 am on a mild night — rises, squeezing out the slack that operators use to absorb renewable variability. During temperature spikes, that already-stressed grid has less room to absorb the residential/commercial surge, forcing gas peaker plants online and degrading air quality within hours.
+
+Nuclear is the one clean source that provides a meaningful structural buffer: it is dispatchable on a slow timescale, runs at near-100 % capacity factor, and displaces the gas peakers that would otherwise set the marginal emission rate. This pipeline tracks that offset directly — comparing AQI degradation during demand spikes in high-nuclear vs low-nuclear grid hours.
+
+### Region selection rationale
+
+| Region | Data center relevance | Nuclear presence | Grid coverage |
+|---|---|---|---|
+| **PJM** | Northern Virginia (Ashburn/Loudoun County) is the world's largest data center cluster — ~35 % of global colocation capacity. Strongest signal for the AI demand thesis. | Large fleet (~35 GW), ~20 % of generation mix. Clear AQI offset signal expected. | Full — PJM is a single balancing authority with clean accounting. |
+| **ERCOT** | Texas (Austin, Dallas, San Antonio corridor) is one of the fastest-growing US data center markets. | ~5 GW (Comanche Peak + South Texas Project). Smaller buffer than PJM. | Full — ERCOT covers essentially all of Texas. |
+| **CAISO** | Silicon Valley (Santa Clara, San Jose) is the main California data center cluster. CAISO covers this via PG&E. | Diablo Canyon Units 1 & 2 (~2.3 GW) — the only operating California reactors. | Partial — see limitations below. |
+
+### Known data coverage limitations
+
+**CAISO excludes the Los Angeles grid (LADWP)**
+
+The Los Angeles Department of Water and Power operates its own balancing authority (EIA code: `LDWP`) and is not part of CAISO. LADWP serves roughly 4 million customers — about 20 % of California's total load — and is **not included** in the `grid_generation_raw` or `grid_demand_hourly` tables.
+
+For the data center thesis this matters less than it might seem: the Silicon Valley hyperscale cluster (Google, Meta, Apple campus infrastructure) sits in PG&E territory, which *is* part of CAISO. LA has data centers but is not the hyperscale hub.
+
+**AQI bounding box covers more territory than the demand data**
+
+The AirNow DAG queries a bounding box that covers all of California, including the LA Basin. The demand and generation data covers CAISO only. This creates a mismatch:
+
+- An LA Basin heat wave will degrade PM2.5 AQI within the CAISO bounding box without producing a matching CAISO demand spike (because LADWP absorbs that load separately).
+- Any correlation model trained on CAISO demand vs CAISO-region AQI will see unexplained AQI exceedances during LA heat events. This weakens California correlations and could produce false negatives.
+
+If extending this project to fully cover California, the fix is to add `LDWP` to the `REGION_MAP` in `dag_eia_grid.py` and either track it as a separate region or merge it into a combined California aggregate.
+
+**EIA generation data has a 14–24 hour publish lag**
+
+EIA validates and publishes generation mix data with roughly a one-day delay. Grid demand data (EIA Form 930) has a similar lag. AirNow AQI is near-real-time (< 1 hour delay). The practical effect is that cross-source correlations in the dbt mart layer are always looking at yesterday's generation vs today's AQI — acceptable for statistical analysis over weeks of data, but not suitable for same-hour event detection without using the raw source tables directly.
+
 ## Schema
 
 The full database schema is defined in [`schema.dbml`](schema.dbml) using [DBML](https://dbml.dbdiagram.io/docs/) format. To render an interactive ERD:
