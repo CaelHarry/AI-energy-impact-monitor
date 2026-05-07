@@ -1,0 +1,468 @@
+{
+  "annotations": { "list": [] },
+  "description": "Data freshness, ingestion volume, and pipeline lag for all six raw hypertables.",
+  "editable": true,
+  "graphTooltip": 1,
+  "links": [],
+  "panels": [
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 20,
+      "title": "Data Freshness — minutes since last insert (ingested_at)",
+      "type": "row"
+    },
+
+    {
+      "datasource": { "type": "postgres", "uid": "pipeline-db" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "decimals": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 60 },
+              { "color": "red", "value": 120 }
+            ]
+          },
+          "unit": "m"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+      "id": 1,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "pipeline-db" },
+          "format": "table",
+          "rawSql": "SELECT ROUND(EXTRACT(EPOCH FROM (NOW() - MAX(ingested_at)))/60)::int AS minutes FROM aqi_raw",
+          "refId": "A"
+        }
+      ],
+      "title": "aqi_raw",
+      "type": "stat"
+    },
+
+    {
+      "datasource": { "type": "postgres", "uid": "pipeline-db" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "decimals": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 60 },
+              { "color": "red", "value": 120 }
+            ]
+          },
+          "unit": "m"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
+      "id": 2,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "pipeline-db" },
+          "format": "table",
+          "rawSql": "SELECT ROUND(EXTRACT(EPOCH FROM (NOW() - MAX(ingested_at)))/60)::int AS minutes FROM weather_raw",
+          "refId": "A"
+        }
+      ],
+      "title": "weather_raw",
+      "type": "stat"
+    },
+
+    {
+      "datasource": { "type": "postgres", "uid": "pipeline-db" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "decimals": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 60 },
+              { "color": "red", "value": 120 }
+            ]
+          },
+          "unit": "m"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
+      "id": 3,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "pipeline-db" },
+          "format": "table",
+          "rawSql": "SELECT ROUND(EXTRACT(EPOCH FROM (NOW() - MAX(ingested_at)))/60)::int AS minutes FROM grid_generation_raw",
+          "refId": "A"
+        }
+      ],
+      "title": "grid_generation_raw",
+      "type": "stat"
+    },
+
+    {
+      "datasource": { "type": "postgres", "uid": "pipeline-db" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "decimals": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 60 },
+              { "color": "red", "value": 120 }
+            ]
+          },
+          "unit": "m"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
+      "id": 4,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "pipeline-db" },
+          "format": "table",
+          "rawSql": "SELECT ROUND(EXTRACT(EPOCH FROM (NOW() - MAX(ingested_at)))/60)::int AS minutes FROM grid_demand_raw",
+          "refId": "A"
+        }
+      ],
+      "title": "grid_demand_raw",
+      "type": "stat"
+    },
+
+    {
+      "datasource": { "type": "postgres", "uid": "pipeline-db" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "decimals": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1440 },
+              { "color": "red", "value": 2880 }
+            ]
+          },
+          "unit": "m"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
+      "id": 5,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "pipeline-db" },
+          "format": "table",
+          "rawSql": "SELECT ROUND(EXTRACT(EPOCH FROM (NOW() - MAX(ingested_at)))/60)::int AS minutes FROM nuclear_status_raw",
+          "refId": "A"
+        }
+      ],
+      "title": "nuclear_status_raw (daily — green < 24 h, red > 48 h)",
+      "type": "stat"
+    },
+
+    {
+      "datasource": { "type": "postgres", "uid": "pipeline-db" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "decimals": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 60 },
+              { "color": "red", "value": 120 }
+            ]
+          },
+          "unit": "m"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
+      "id": 6,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "pipeline-db" },
+          "format": "table",
+          "rawSql": "SELECT ROUND(EXTRACT(EPOCH FROM (NOW() - MAX(ingested_at)))/60)::int AS minutes FROM seismic_raw",
+          "refId": "A"
+        }
+      ],
+      "title": "seismic_raw",
+      "type": "stat"
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
+      "id": 21,
+      "title": "Ingestion Volume",
+      "type": "row"
+    },
+
+    {
+      "datasource": { "type": "postgres", "uid": "pipeline-db" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "rows",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "lineWidth": 1,
+            "scaleDistribution": { "type": "linear" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 16, "x": 0, "y": 6 },
+      "id": 7,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.6,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": false },
+        "orientation": "horizontal",
+        "showValue": "always",
+        "stacking": "none",
+        "tooltip": { "maxHeight": 600, "mode": "single", "sort": "none" },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 200
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "pipeline-db" },
+          "format": "table",
+          "rawSql": "SELECT 'aqi_raw' AS \"table\", COUNT(*)::int AS rows FROM aqi_raw WHERE ingested_at > NOW() - INTERVAL '24 hours' UNION ALL SELECT 'weather_raw', COUNT(*)::int FROM weather_raw WHERE ingested_at > NOW() - INTERVAL '24 hours' UNION ALL SELECT 'grid_generation_raw', COUNT(*)::int FROM grid_generation_raw WHERE ingested_at > NOW() - INTERVAL '24 hours' UNION ALL SELECT 'grid_demand_raw', COUNT(*)::int FROM grid_demand_raw WHERE ingested_at > NOW() - INTERVAL '24 hours' UNION ALL SELECT 'nuclear_status_raw', COUNT(*)::int FROM nuclear_status_raw WHERE ingested_at > NOW() - INTERVAL '24 hours' UNION ALL SELECT 'seismic_raw', COUNT(*)::int FROM seismic_raw WHERE ingested_at > NOW() - INTERVAL '24 hours' ORDER BY rows DESC",
+          "refId": "A"
+        }
+      ],
+      "title": "Rows inserted — last 24 h",
+      "type": "barchart"
+    },
+
+    {
+      "datasource": { "type": "postgres", "uid": "pipeline-db" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "decimals": 1,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 16 },
+              { "color": "red", "value": 20 }
+            ]
+          },
+          "unit": "h"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 6 },
+      "id": 8,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "text": {},
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "pipeline-db" },
+          "format": "table",
+          "rawSql": "SELECT ROUND(EXTRACT(EPOCH FROM (NOW() - MAX(time)))/3600, 1) AS \"EIA data lag (h)\" FROM grid_generation_raw",
+          "refId": "A"
+        }
+      ],
+      "title": "grid_generation_raw data lag (EIA ~14 h; alert > 20 h)",
+      "type": "stat"
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 },
+      "id": 22,
+      "title": "Row count over time — 1 h buckets",
+      "type": "row"
+    },
+
+    {
+      "datasource": { "type": "postgres", "uid": "pipeline-db" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "rows / hour",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 4,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 15 },
+      "id": 9,
+      "options": {
+        "legend": { "calcs": ["last"], "displayMode": "table", "placement": "right", "showLegend": true },
+        "tooltip": { "maxHeight": 600, "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "pipeline-db" },
+          "format": "time_series",
+          "rawSql": "SELECT time_bucket('1 hour', ingested_at) AS time, COUNT(*) AS \"aqi_raw\" FROM aqi_raw WHERE $__timeFilter(ingested_at) GROUP BY 1 ORDER BY 1",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "postgres", "uid": "pipeline-db" },
+          "format": "time_series",
+          "rawSql": "SELECT time_bucket('1 hour', ingested_at) AS time, COUNT(*) AS \"weather_raw\" FROM weather_raw WHERE $__timeFilter(ingested_at) GROUP BY 1 ORDER BY 1",
+          "refId": "B"
+        },
+        {
+          "datasource": { "type": "postgres", "uid": "pipeline-db" },
+          "format": "time_series",
+          "rawSql": "SELECT time_bucket('1 hour', ingested_at) AS time, COUNT(*) AS \"grid_generation_raw\" FROM grid_generation_raw WHERE $__timeFilter(ingested_at) GROUP BY 1 ORDER BY 1",
+          "refId": "C"
+        },
+        {
+          "datasource": { "type": "postgres", "uid": "pipeline-db" },
+          "format": "time_series",
+          "rawSql": "SELECT time_bucket('1 hour', ingested_at) AS time, COUNT(*) AS \"grid_demand_raw\" FROM grid_demand_raw WHERE $__timeFilter(ingested_at) GROUP BY 1 ORDER BY 1",
+          "refId": "D"
+        },
+        {
+          "datasource": { "type": "postgres", "uid": "pipeline-db" },
+          "format": "time_series",
+          "rawSql": "SELECT time_bucket('1 hour', ingested_at) AS time, COUNT(*) AS \"nuclear_status_raw\" FROM nuclear_status_raw WHERE $__timeFilter(ingested_at) GROUP BY 1 ORDER BY 1",
+          "refId": "E"
+        },
+        {
+          "datasource": { "type": "postgres", "uid": "pipeline-db" },
+          "format": "time_series",
+          "rawSql": "SELECT time_bucket('1 hour', ingested_at) AS time, COUNT(*) AS \"seismic_raw\" FROM seismic_raw WHERE $__timeFilter(ingested_at) GROUP BY 1 ORDER BY 1",
+          "refId": "F"
+        }
+      ],
+      "title": "Rows inserted per hour — all tables",
+      "type": "timeseries"
+    }
+
+  ],
+  "refresh": "5m",
+  "schemaVersion": 39,
+  "tags": ["pipeline", "health"],
+  "time": { "from": "now-24h", "to": "now" },
+  "timepicker": {},
+  "timezone": "utc",
+  "title": "Pipeline Health",
+  "uid": "pipeline-health",
+  "version": 1
+}

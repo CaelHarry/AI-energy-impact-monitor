@@ -38,6 +38,10 @@ def upsert(table: str, rows: list[dict], conflict_cols: list[str]) -> int:
     update_cols = [c for c in cols if c not in conflict_cols]
 
     if update_cols:
+        updates = list(
+            sql.SQL("{} = EXCLUDED.{}").format(sql.Identifier(c), sql.Identifier(c))
+            for c in update_cols
+        ) + [sql.SQL("ingested_at = NOW()")]
         stmt = sql.SQL(
             "INSERT INTO {table} ({cols}) VALUES ({placeholders}) "
             "ON CONFLICT ({conflict}) DO UPDATE SET {updates}"
@@ -46,10 +50,7 @@ def upsert(table: str, rows: list[dict], conflict_cols: list[str]) -> int:
             cols=sql.SQL(", ").join(map(sql.Identifier, cols)),
             placeholders=sql.SQL(", ").join([sql.Placeholder()] * len(cols)),
             conflict=sql.SQL(", ").join(map(sql.Identifier, conflict_cols)),
-            updates=sql.SQL(", ").join(
-                sql.SQL("{} = EXCLUDED.{}").format(sql.Identifier(c), sql.Identifier(c))
-                for c in update_cols
-            ),
+            updates=sql.SQL(", ").join(updates),
         )
     else:
         stmt = sql.SQL(

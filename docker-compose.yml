@@ -165,7 +165,28 @@ services:
     command: ["debug"]
     restart: "no"
 
-  # ── 6. pgAdmin ───────────────────────────────────────────────
+  # ── 6. Grafana ───────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:latest
+    container_name: pipeline-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      PIPELINE_DB_PASSWORD: ${PIPELINE_DB_PASSWORD}
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - pipeline-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── 7. pgAdmin ───────────────────────────────────────────────
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: pipeline-pgadmin
@@ -187,6 +208,7 @@ services:
 
 volumes:
   postgres-data:
+  grafana-data:
   pgadmin-data:
 
 networks:

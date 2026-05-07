@@ -16,3 +16,4 @@ from {{ source('raw', 'nuclear_status_raw') }}
 where
     power_pct is not null
     and power_pct between 0 and 110
+    and region_id is not null

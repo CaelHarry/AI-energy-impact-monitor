@@ -13,6 +13,7 @@ secrets/
 # ── Docker volumes (large, machine-specific) ──────────────────
 postgres-data/
 pgadmin-data/
+grafana-data/
 
 # ── Airflow ───────────────────────────────────────────────────
 airflow/logs/

@@ -47,7 +47,7 @@ def dag_grid_demand():
 
     @task()
     def fetch_demand() -> list[dict]:
-        """Fetch the last 3 hours of demand data for ERCOT, CAISO, and PJM."""
+        """Fetch the last 3 hours of demand (D) and day-ahead forecast (DF) for all regions."""
         if not EIA_API_KEY:
             raise RuntimeError("EIA_API_KEY is not set in the environment")
 
@@ -59,52 +59,74 @@ def dag_grid_demand():
             "frequency":            "hourly",
             "data[0]":              "value",
             "facets[respondent][]": list(REGION_MAP.keys()),
-            "facets[type][]":       ["D"],   # D = Demand
+            "facets[type][]":       ["D", "DF"],  # D = Demand, DF = Day-ahead forecast
             "start":                start,
             "sort[0][column]":      "period",
             "sort[0][direction]":   "desc",
-            "length":               50,
+            "length":               100,
             "offset":               0,
         }
 
-        log.info("fetching EIA demand from %s", start)
+        log.info("fetching EIA demand + forecast from %s", start)
         with httpx.Client(timeout=30) as client:
             resp = client.get(BASE_URL, params=params)
             resp.raise_for_status()
 
         rows = resp.json().get("response", {}).get("data", [])
-        log.info("received %d EIA demand rows", len(rows))
+        log.info("received %d EIA rows (D + DF)", len(rows))
         return rows
 
     @task()
     def validate(raw_rows: list[dict]) -> list[dict]:
-        """Parse and validate each EIA demand row."""
-        rows = []
-        bad  = 0
+        """
+        Merge D (actual demand) and DF (forecast) rows by (period, respondent)
+        into a single row per (time, region_id) with both demand_mw and forecast_mw.
+        """
+        demand: dict[tuple, float]   = {}
+        forecast: dict[tuple, float] = {}
+        bad = 0
+
         for row in raw_rows:
             respondent = row.get("respondent", "")
             region_id  = REGION_MAP.get(respondent)
             period     = row.get("period", "")
             value      = row.get("value")
+            row_type   = row.get("type", "")
 
             if not region_id or not period or value is None:
                 bad += 1
                 continue
 
+            key = (period, region_id)
             try:
-                raw = {
-                    "time":      period,
-                    "region_id": region_id,
-                    "demand_mw": float(value),
-                    "source":    "eia",
-                }
-                validated = GridDemandRow(**raw)
-                rows.append(validated.to_db())
-            except (ValidationError, Exception) as e:
-                log.warning("skipping demand row %s: %s", row, e)
+                if row_type == "D":
+                    demand[key] = float(value)
+                elif row_type == "DF":
+                    forecast[key] = float(value)
+            except (ValueError, TypeError) as e:
+                log.warning("skipping row %s: %s", row, e)
                 bad += 1
 
-        log.info("validated %d rows, %d skipped", len(rows), bad)
+        all_keys = demand.keys() | forecast.keys()
+        rows = []
+        for key in all_keys:
+            period, region_id = key
+            if key not in demand:
+                continue  # skip forecast-only rows with no actual demand
+            try:
+                validated = GridDemandRow(
+                    time=period,
+                    region_id=region_id,
+                    demand_mw=demand[key],
+                    forecast_mw=forecast.get(key),
+                    source="eia",
+                )
+                rows.append(validated.to_db())
+            except (ValidationError, Exception) as e:
+                log.warning("skipping merged row %s: %s", key, e)
+                bad += 1
+
+        log.info("validated %d merged rows, %d skipped", len(rows), bad)
         return rows
 
     @task()

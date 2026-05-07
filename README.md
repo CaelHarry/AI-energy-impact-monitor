@@ -26,6 +26,7 @@ Pulls live data from six public sources, stores it in a time-series PostgreSQL d
 | Orchestration | Apache Airflow 2.9 |
 | Storage | PostgreSQL 16 + TimescaleDB |
 | Transformation | dbt (dbt-postgres) |
+| Monitoring | Grafana (provisioned dashboards) |
 | Containerisation | Docker + Docker Compose |
 | DB browser | pgAdmin 4 |
 | Language | Python 3.11 |
@@ -46,8 +47,8 @@ PostgreSQL            ← raw hypertables, time-partitioned by TimescaleDB
 dbt models            ← staging → intermediate → mart layers
     │                    spike detection, cross-source correlation
     ▼
-Dashboard             ← live heatmap, spike alerts, trend charts
-(Phase 5)
+Grafana               ← pipeline health monitoring (auto-provisioned)
+                         live heatmap dashboard (Phase 5)
 ```
 
 ## Key questions this answers
@@ -125,6 +126,7 @@ On first run this initialises the Airflow database and creates the admin user au
 | Service | URL | Credentials |
 |---|---|---|
 | Airflow UI | http://localhost:8080 | admin / (from .env) |
+| Grafana | http://localhost:3000 | admin / (from .env) |
 | pgAdmin | http://localhost:5050 | admin@pipeline.dev / (from .env) |
 | PostgreSQL | localhost:5432 | pipeline / (from .env) |
 
@@ -159,14 +161,35 @@ docker exec -it pipeline-postgres psql -U pipeline -d pipeline -c "\dx"
 │   └── plugins/
 │       └── pipeline/      ← shared helpers (models.py, db.py)
 │
-└── dbt/
-    ├── profiles.yml
-    ├── models/
-    │   ├── staging/
-    │   ├── intermediate/
-    │   └── marts/
-    └── tests/
+├── dbt/
+│   ├── profiles.yml
+│   ├── models/
+│   │   ├── staging/
+│   │   ├── intermediate/
+│   │   └── marts/
+│   └── tests/
+│
+└── grafana/
+    └── provisioning/
+        ├── datasources/   ← pipeline DB connection (auto-provisioned)
+        └── dashboards/    ← pipeline health dashboard JSON
 ```
+
+## Pipeline health monitoring
+
+Grafana is included in the stack and auto-provisions a **Pipeline Health** dashboard at [http://localhost:3000](http://localhost:3000) (login: `admin` / value of `GRAFANA_PASSWORD` in `.env`).
+
+The dashboard has three sections:
+
+| Section | Panels | What it shows |
+|---|---|---|
+| Data Freshness | 6 stat panels (one per table) | Minutes/hours since the last row landed — green → yellow → red thresholds per source cadence |
+| Ingestion Volume | Bar chart + EIA lag stat | Rows inserted in the last 24 h per table; EIA data publish lag in hours (~14 h expected) |
+| Row count over time | Time-series (1 h buckets) | Per-table ingestion rate across the selected time range |
+
+<!-- Add dashboard screenshot here -->
+
+The dashboard and datasource are fully provisioned from files in `grafana/provisioning/` — no manual setup required after `make up`.
 
 ## Build phases
 
@@ -174,7 +197,8 @@ docker exec -it pipeline-postgres psql -U pipeline -d pipeline -c "\dx"
 - [x] Phase 2 — TimescaleDB schema (raw hypertables)
 - [x] Phase 3 — Airflow DAGs (one per source)
 - [x] Phase 4 — dbt transformation layer (16 models, 65 tests)
-- [ ] Phase 5 — Live heatmap dashboard
+- [x] Phase 4.5 — Grafana pipeline health monitoring dashboard
+- [ ] Phase 5 — Live AI energy impact heatmap dashboard
 
 ## Useful commands
 

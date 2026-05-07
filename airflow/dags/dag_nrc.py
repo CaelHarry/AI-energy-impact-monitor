@@ -16,7 +16,7 @@ import httpx
 from airflow.decorators import dag, task
 from pydantic import ValidationError
 
-from pipeline.db import upsert_ignore
+from pipeline.db import upsert
 from pipeline.models import NuclearStatusRow
 
 log = logging.getLogger(__name__)
@@ -27,14 +27,52 @@ NRC_URL = os.environ.get(
     "powerreactorstatusforlast365days.txt",
 )
 
-# Map NRC state codes to grid region IDs
-STATE_TO_REGION = {
-    "TX": "ERCOT",
-    "CA": "CAISO",
-    "VA": "PJM", "MD": "PJM", "DC": "PJM", "PA": "PJM",
-    "NJ": "PJM", "DE": "PJM", "OH": "PJM", "WV": "PJM",
-    "IL": "PJM", "MI": "PJM", "IN": "PJM", "KY": "PJM",
-    "NC": "PJM", "TN": "PJM",
+# Direct plant-name → region mapping.
+# The NRC pipe-delimited file has no state/region column; state must be inferred
+# from the plant name. Only plants inside ERCOT, CAISO, and PJM footprints are
+# mapped — all others are left as None and excluded from dbt models.
+UNIT_TO_REGION: dict[str, str] = {
+    # ERCOT — Texas
+    "Comanche Peak 1": "ERCOT",
+    "Comanche Peak 2": "ERCOT",
+    "South Texas 1":   "ERCOT",
+    "South Texas 2":   "ERCOT",
+    # CAISO — California
+    "Diablo Canyon 1": "CAISO",
+    "Diablo Canyon 2": "CAISO",
+    # PJM — Mid-Atlantic / Midwest (ComEd IL, Dominion VA, FirstEnergy OH/PA, PSEG NJ, AEP MI)
+    "Beaver Valley 1":  "PJM",
+    "Beaver Valley 2":  "PJM",
+    "Braidwood 1":      "PJM",
+    "Braidwood 2":      "PJM",
+    "Byron 1":          "PJM",
+    "Byron 2":          "PJM",
+    "Calvert Cliffs 1": "PJM",
+    "Calvert Cliffs 2": "PJM",
+    "Clinton":          "PJM",
+    "D.C. Cook 1":      "PJM",
+    "D.C. Cook 2":      "PJM",
+    "Davis-Besse":      "PJM",
+    "Dresden 2":        "PJM",
+    "Dresden 3":        "PJM",
+    "Hope Creek 1":     "PJM",
+    "LaSalle 1":        "PJM",
+    "LaSalle 2":        "PJM",
+    "Limerick 1":       "PJM",
+    "Limerick 2":       "PJM",
+    "North Anna 1":     "PJM",
+    "North Anna 2":     "PJM",
+    "Peach Bottom 2":   "PJM",
+    "Peach Bottom 3":   "PJM",
+    "Perry 1":          "PJM",
+    "Quad Cities 1":    "PJM",
+    "Quad Cities 2":    "PJM",
+    "Salem 1":          "PJM",
+    "Salem 2":          "PJM",
+    "Surry 1":          "PJM",
+    "Surry 2":          "PJM",
+    "Susquehanna 1":    "PJM",
+    "Susquehanna 2":    "PJM",
 }
 
 
@@ -89,10 +127,7 @@ def dag_nrc_reactor_status():
             status_code = line.get("RxType", "").strip() or None
             operator    = line.get("Licensee", "").strip() or None
 
-            # Derive state from unit name suffix where possible
-            # NRC names are like "VOGTLE 3" — state lookup via separate mapping
-            state_code = line.get("NRCRegion", "").strip() or None
-            region_id  = STATE_TO_REGION.get(state_code)
+            region_id  = UNIT_TO_REGION.get(unit_name)
 
             try:
                 row = NuclearStatusRow(
@@ -100,7 +135,7 @@ def dag_nrc_reactor_status():
                     unit_name=unit_name,
                     power_pct=power_pct if power_pct else None,
                     status_code=status_code,
-                    state_code=state_code,
+                    state_code=None,
                     operator=operator,
                     region_id=region_id,
                 )
@@ -118,7 +153,7 @@ def dag_nrc_reactor_status():
         if not rows:
             log.warning("no rows to load")
             return 0
-        return upsert_ignore(
+        return upsert(
             table="nuclear_status_raw",
             rows=rows,
             conflict_cols=["time", "unit_name"],

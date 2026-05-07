@@ -1,0 +1,21 @@
+apiVersion: 1
+
+datasources:
+  - name: Pipeline DB
+    uid: pipeline-db
+    type: postgres
+    url: postgres:5432
+    database: pipeline
+    user: pipeline
+    secureJsonData:
+      password: ${PIPELINE_DB_PASSWORD}
+    jsonData:
+      database: pipeline
+      sslmode: disable
+      maxOpenConns: 10
+      maxIdleConns: 2
+      connMaxLifetime: 14400
+      postgresVersion: 1600
+      timescaledb: true
+    isDefault: true
+    editable: false
