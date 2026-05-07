@@ -80,14 +80,17 @@ The Los Angeles Department of Water and Power operates its own balancing authori
 
 For the data center thesis this matters less than it might seem: the Silicon Valley hyperscale cluster (Google, Meta, Apple campus infrastructure) sits in PG&E territory, which *is* part of CAISO. LA has data centers but is not the hyperscale hub.
 
-**AQI bounding box covers more territory than the demand data**
+**AQI bounding box: scoped to Northern California only**
 
-The AirNow DAG queries a bounding box that covers all of California, including the LA Basin. The demand and generation data covers CAISO only. This creates a mismatch:
+The LA Basin creates a geographic mismatch: monitoring stations there are served by a mix of LADWP (not in CAISO) and SCE (in CAISO), with no clean boundary that follows the utility service territories. Including the full state would blend LA Basin AQI readings — which have no matching demand signal — into the CAISO average, producing spurious correlation failures during LA heat events.
 
-- An LA Basin heat wave will degrade PM2.5 AQI within the CAISO bounding box without producing a matching CAISO demand spike (because LADWP absorbs that load separately).
-- Any correlation model trained on CAISO demand vs CAISO-region AQI will see unexplained AQI exceedances during LA heat events. This weakens California correlations and could produce false negatives.
+To avoid this, the AirNow bounding box for CAISO is intentionally limited to Northern California (`lat >= 36.5`), covering the Bay Area and Silicon Valley — the region that is both the primary California data center cluster and cleanly inside CAISO's grid boundary. This means:
 
-If extending this project to fully cover California, the fix is to add `LDWP` to the `REGION_MAP` in `dag_eia_grid.py` and either track it as a separate region or merge it into a combined California aggregate.
+- AQI readings reflect air quality in and around the Silicon Valley data center concentration.
+- Demand spikes in CAISO data and AQI spikes in the bounding box come from the same geographic and grid territory.
+- San Diego (SDG&E, also part of CAISO) is outside this box and excluded. It could be added as a separate named region if SoCal coverage is needed.
+
+If extending coverage to include full California, the recommended approach is to add `LDWP` to `REGION_MAP` in `dag_eia_grid.py` as a separate region and add a matching LA Basin bounding box in `dag_airnow.py`, rather than merging it into CAISO.
 
 **EIA generation data has a 14–24 hour publish lag**
 
