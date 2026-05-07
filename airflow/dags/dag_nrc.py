@@ -10,7 +10,7 @@ import os
 import logging
 import csv
 import io
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 import httpx
 from airflow.decorators import dag, task
@@ -111,6 +111,7 @@ def dag_nrc_reactor_status():
         """
         rows = []
         bad  = 0
+        cutoff = datetime.now(timezone.utc) - timedelta(days=7)
 
         reader = csv.DictReader(
             io.StringIO(raw_text),
@@ -139,6 +140,9 @@ def dag_nrc_reactor_status():
                     operator=operator,
                     region_id=region_id,
                 )
+                # Skip rows older than 7 days — historical backfill already done on first run
+                if row.time < cutoff:
+                    continue
                 rows.append(row.to_db())
             except (ValidationError, Exception) as e:
                 log.warning("skipping invalid row %s: %s", line, e)

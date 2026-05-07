@@ -277,13 +277,13 @@
             "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "rows",
+            "axisLabel": "rows (log₂)",
             "axisPlacement": "auto",
             "fillOpacity": 80,
             "gradientMode": "none",
             "hideFrom": { "legend": false, "tooltip": false, "viz": false },
             "lineWidth": 1,
-            "scaleDistribution": { "type": "linear" },
+            "scaleDistribution": { "type": "log", "log": 2 },
             "thresholdsStyle": { "mode": "off" }
           },
           "mappings": [],
@@ -333,8 +333,8 @@
             "mode": "absolute",
             "steps": [
               { "color": "green", "value": null },
-              { "color": "yellow", "value": 16 },
-              { "color": "red", "value": 20 }
+              { "color": "yellow", "value": 26 },
+              { "color": "red", "value": 36 }
             ]
           },
           "unit": "h"
@@ -360,7 +360,7 @@
           "refId": "A"
         }
       ],
-      "title": "grid_generation_raw data lag (EIA ~14 h; alert > 20 h)",
+      "title": "grid_generation_raw data lag (EIA Form 930 ~14–24 h; alert > 36 h)",
       "type": "stat"
     },
 
@@ -381,7 +381,7 @@
             "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "rows / hour",
+            "axisLabel": "rows / hour (log₂)",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
@@ -392,7 +392,7 @@
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 4,
-            "scaleDistribution": { "type": "linear" },
+            "scaleDistribution": { "type": "log", "log": 2 },
             "showPoints": "auto",
             "spanNulls": false,
             "stacking": { "group": "A", "mode": "none" },

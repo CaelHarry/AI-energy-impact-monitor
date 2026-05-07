@@ -68,7 +68,7 @@ def dag_eia_grid():
             raise RuntimeError("EIA_API_KEY is not set in the environment")
 
         now   = datetime.now(timezone.utc)
-        start = (now - timedelta(hours=24)).strftime("%Y-%m-%dT%H")
+        start = (now - timedelta(hours=48)).strftime("%Y-%m-%dT%H")
 
         params = {
             "api_key":              EIA_API_KEY,
@@ -78,7 +78,7 @@ def dag_eia_grid():
             "start":                start,
             "sort[0][column]":      "period",
             "sort[0][direction]":   "desc",
-            "length":               700,
+            "length":               1500,
             "offset":               0,
         }
 
