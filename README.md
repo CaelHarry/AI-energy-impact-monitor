@@ -353,11 +353,11 @@ The dashboard has three sections:
 **Live Grid State** — 6 stat cards across the top. Left three show current fossil % per region (green < 20 % → yellow → orange → red > 60 %); right three show current demand in GW (blue, informational). Generation mix has a ~24 h EIA publish lag; demand is near-real-time.
 
 **Data Center Footprint (geomap)** — full-width map. Each facility is a circle at its approximate coordinates:
-- **Marker color** = region fossil % using the same green/yellow/orange/red thresholds. All facilities in the same region share a color, so you immediately see which clusters are running on dirty vs clean power.
+- **Marker color** = regional grid fossil % (green < 20 % → yellow → orange → red > 60 %). This is the **marginal emission rate of the surrounding grid**, not the power source of the facility itself. Hyperscale operators (Google, Amazon, Meta, Microsoft) hold Power Purchase Agreements and Renewable Energy Certificates that are not reflected here. What the color does tell you: when demand spikes in that region, the next MW dispatched comes from whatever is at the top of the stack — which during peak events is almost always gas. That is the signal relevant to the project thesis.
 - **Marker size** = `capacity_mw_est` (min 8 px → max 40 px). The Amazon Ashburn campus (500 MW) and Google Midlothian (300 MW) dominate visually.
-- **Hover tooltip** shows: facility name, operator, type, lat/lon, capacity, and the live join fields — fossil %, clean %, demand GW for that region.
+- **Hover tooltip** shows: facility name, operator, type, capacity, and the live join fields — fossil %, clean %, demand GW for that region.
 
-The three geographic clusters are visually obvious from location alone — Texas (ERCOT), Bay Area (CAISO), Northern Virginia (PJM) — so the color encoding adds the live signal layer on top.
+The three geographic clusters are visually obvious from location alone — Texas (ERCOT), Bay Area (CAISO), Northern Virginia (PJM) — so the color encoding adds the live marginal emission signal on top.
 
 **Facility Directory** — full-width sortable table with all 16 facilities. Region cells are color-mapped (orange = ERCOT, blue = CAISO, green = PJM). Capacity cells use green → yellow → orange → red thresholds (100 / 200 / 400 MW) to highlight the largest consumers.
 

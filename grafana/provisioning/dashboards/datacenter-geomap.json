@@ -12,7 +12,7 @@
       }
     ]
   },
-  "description": "Live grid stress at AI data center locations. Marker color = current fossil % of the facility's grid region (green = clean, red = fossil-heavy). Marker size = estimated MW capacity. Generation mix has a ~24h EIA publish lag; demand is near-real-time.",
+  "description": "AI data center locations overlaid with regional grid mix. Marker color = fossil % of the surrounding grid region — a proxy for the marginal emission rate during demand events, not the power source of the facility itself. Hyperscale operators hold PPAs and RECs that don't appear here. Marker size = estimated MW capacity. Generation mix has a ~24h EIA publish lag; demand is near-real-time.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
@@ -273,7 +273,7 @@
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
       "id": 8,
-      "title": "Data Center Footprint — marker color = region fossil %, size = estimated MW capacity",
+      "title": "Data Center Footprint — marker color = regional grid fossil % (marginal emission rate), size = estimated MW capacity",
       "type": "row"
     },
     {
@@ -384,7 +384,7 @@
           "refId": "A"
         }
       ],
-      "title": "Data Center Locations — hover for live grid state",
+      "title": "Data Center Locations — color shows regional grid fossil % (marginal emission rate, not facility power source)",
       "type": "geomap"
     },
     {
