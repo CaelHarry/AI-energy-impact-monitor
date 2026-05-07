@@ -297,6 +297,51 @@ Notable reactors tracked:
 - **CAISO**: Diablo Canyon (2 × ~1.15 GW) — the only operating reactor in California; license extended to ~2030
 - **PJM**: ~35 GW fleet across Pennsylvania, New Jersey, Illinois, and Virginia — the largest nuclear fleet of any US grid region
 
+## Temperature vs Grid Demand Correlation dashboard
+
+A third dashboard auto-provisions under the title **Temperature vs Grid Demand**. It refreshes every 5 minutes and defaults to a 7-day window with shared crosshair enabled across all panels.
+
+The dashboard answers a single question per region: when outdoor temperature rises, how fast and how steeply does grid demand follow?
+
+The dashboard has three full-width panels — one per region (ERCOT, CAISO, PJM). Each panel overlays two time series on a dual Y-axis:
+
+| Series | Color | Axis | Unit | Source |
+|---|---|---|---|---|
+| Temperature (°C) | Orange | Left | °C | `weather_raw.temperature_2m` |
+| Demand (GW) | Blue | Right | GW | `grid_demand_hourly.demand_avg_mw / 1000` |
+
+The shared crosshair (`graphTooltip: 1`) lets you hover on any panel and see the exact temperature and demand values across all three regions at the same timestamp.
+
+**Typical patterns to look for:**
+
+- **ERCOT**: strong positive correlation in summer — Texas cooling load tracks temperature closely. PJM shows a similar pattern but with a larger absolute demand floor (data center baseload in Northern Virginia).
+- **CAISO**: California's grid increasingly absorbs solar midday, so temperature and demand correlate less cleanly — look at evening hours when solar drops off and cooling load persists.
+- **Lag signal**: demand typically peaks 1–2 hours after the daily temperature maximum. This lag is the window in which gas peakers spin up and PM2.5 starts rising.
+
+## Demand Spike Events dashboard
+
+A fourth dashboard auto-provisions under the title **Demand Spike Events**. It refreshes hourly and defaults to a 30-day window.
+
+This is the core analytical output of the pipeline — each row is a detected demand spike event correlated with its 2-hour air quality impact.
+
+**Spike detection logic** (in `dbt/models/intermediate/int_demand_spikes.sql`): an hour is flagged as a spike when demand exceeds the 7-day same-hour-of-week baseline by more than 2 standard deviations. This filters out predictable daily and weekly cycles and surfaces anomalous demand events driven by weather or large load additions.
+
+**Bootstrap period**: the 2-sigma model requires 7 days of same-hour-of-week history per `(region_id, day-of-week, hour-of-day)` partition before it can flag any spike. The mart will start populating after ~7 days of pipeline data.
+
+The dashboard has two sections:
+
+**30-Day Summary** — 3 stat cards:
+
+| Card | Query | Color thresholds |
+|---|---|---|
+| Spike Events (30d) | `COUNT(*)` from `mart_demand_spike_events` | Blue (static) |
+| Avg Demand Anomaly (MW above baseline) | `AVG(demand_anomaly_mw)` | Green → Yellow (500 MW) → Orange (1500 MW) → Red (3000 MW) |
+| Avg PM2.5 Δ 2h After Spike | `AVG(pm25_aqi_delta_2h)` | Green → Yellow (+2) → Orange (+8) → Red (+15) |
+
+**Spike Event Log** — full-width sortable table with all spike events in the selected time window, newest first. Columns include spike hour, region, demand anomaly, temperature, PM2.5 at spike and 2 hours after, AQI delta, nuclear %, and fossil %. The **AQI Δ 2h**, **Anomaly (MW)**, and **Fossil %** columns are color-coded using cell backgrounds to highlight the worst events at a glance.
+
+**Reading the AQI Δ 2h column**: a positive value means air quality worsened in the 2 hours after the demand spike — the primary signal of gas peaker activation. A negative value means air quality improved (e.g. wind picked up, or the spike was met by clean sources). High fossil % rows with high AQI Δ 2h are the strongest evidence of peaker-driven pollution.
+
 ## Build phases
 
 - [x] Phase 1 — Docker Compose infrastructure
@@ -306,6 +351,8 @@ Notable reactors tracked:
 - [x] Phase 4.5 — Grafana pipeline health monitoring dashboard
 - [x] Phase 5 — AI Energy Impact Monitor dashboard (grid mix, demand, PM2.5 concentration)
 - [x] Phase 5.5 — Nuclear Fleet Status dashboard (capacity factors, reactor table, 30-day trend)
+- [x] Phase 5.6 — Temperature vs Grid Demand Correlation dashboard (dual Y-axis, shared crosshair)
+- [x] Phase 5.7 — Demand Spike Events dashboard (spike log, AQI delta, 30-day summary cards)
 
 ## Useful commands
 
