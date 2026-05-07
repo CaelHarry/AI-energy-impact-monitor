@@ -12,7 +12,7 @@
       }
     ]
   },
-  "description": "AI data center locations across ERCOT, CAISO, and PJM grid regions. Marker size reflects estimated MW capacity. The Northern Virginia cluster (PJM) represents ~35% of global colocation capacity.",
+  "description": "Live grid stress at AI data center locations. Marker color = current fossil % of the facility's grid region (green = clean, red = fossil-heavy). Marker size = estimated MW capacity. Generation mix has a ~24h EIA publish lag; demand is near-real-time.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
@@ -23,27 +23,282 @@
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
       "id": 1,
-      "title": "Data Center Locations",
+      "title": "Live Grid State",
       "type": "row"
     },
     {
       "datasource": { "type": "postgres", "uid": "pipeline-db" },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 20 },
+              { "color": "orange", "value": 40 },
+              { "color": "red", "value": 60 }
+            ]
+          },
+          "unit": "percent",
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+      "id": 2,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "pipeline-db" },
+          "format": "table",
+          "rawSql": "SELECT ROUND(AVG(fossil_pct)::numeric, 1) AS \"ERCOT Fossil %\" FROM grid_generation_raw WHERE time >= NOW() - INTERVAL '26 hours' AND region_id = 'ERCOT'",
+          "refId": "A"
+        }
+      ],
+      "title": "ERCOT — Fossil %",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "pipeline-db" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 20 },
+              { "color": "orange", "value": 40 },
+              { "color": "red", "value": 60 }
+            ]
+          },
+          "unit": "percent",
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
+      "id": 3,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "pipeline-db" },
+          "format": "table",
+          "rawSql": "SELECT ROUND(AVG(fossil_pct)::numeric, 1) AS \"CAISO Fossil %\" FROM grid_generation_raw WHERE time >= NOW() - INTERVAL '26 hours' AND region_id = 'CAISO'",
+          "refId": "A"
+        }
+      ],
+      "title": "CAISO — Fossil %",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "pipeline-db" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 20 },
+              { "color": "orange", "value": 40 },
+              { "color": "red", "value": 60 }
+            ]
+          },
+          "unit": "percent",
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
+      "id": 4,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "pipeline-db" },
+          "format": "table",
+          "rawSql": "SELECT ROUND(AVG(fossil_pct)::numeric, 1) AS \"PJM Fossil %\" FROM grid_generation_raw WHERE time >= NOW() - INTERVAL '26 hours' AND region_id = 'PJM'",
+          "refId": "A"
+        }
+      ],
+      "title": "PJM — Fossil %",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "pipeline-db" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue", "value": null }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
+      "id": 5,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "pipeline-db" },
+          "format": "table",
+          "rawSql": "SELECT ROUND((AVG(demand_avg_mw) / 1000)::numeric, 1) AS \"ERCOT Demand (GW)\" FROM grid_demand_hourly WHERE bucket >= NOW() - INTERVAL '3 hours' AND region_id = 'ERCOT'",
+          "refId": "A"
+        }
+      ],
+      "title": "ERCOT — Demand (GW)",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "pipeline-db" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue", "value": null }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
+      "id": 6,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "pipeline-db" },
+          "format": "table",
+          "rawSql": "SELECT ROUND((AVG(demand_avg_mw) / 1000)::numeric, 1) AS \"CAISO Demand (GW)\" FROM grid_demand_hourly WHERE bucket >= NOW() - INTERVAL '3 hours' AND region_id = 'CAISO'",
+          "refId": "A"
+        }
+      ],
+      "title": "CAISO — Demand (GW)",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "pipeline-db" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue", "value": null }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
+      "id": 7,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "pipeline-db" },
+          "format": "table",
+          "rawSql": "SELECT ROUND((AVG(demand_avg_mw) / 1000)::numeric, 1) AS \"PJM Demand (GW)\" FROM grid_demand_hourly WHERE bucket >= NOW() - INTERVAL '3 hours' AND region_id = 'PJM'",
+          "refId": "A"
+        }
+      ],
+      "title": "PJM — Demand (GW)",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
+      "id": 8,
+      "title": "Data Center Footprint — marker color = region fossil %, size = estimated MW capacity",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "pipeline-db" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
           "custom": {
             "hideFrom": { "legend": false, "tooltip": false, "viz": false }
           },
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "green", "value": null }]
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 20 },
+              { "color": "orange", "value": 40 },
+              { "color": "red", "value": 60 }
+            ]
           }
         },
         "overrides": []
       },
-      "gridPos": { "h": 18, "w": 24, "x": 0, "y": 1 },
-      "id": 2,
+      "gridPos": { "h": 18, "w": 24, "x": 0, "y": 6 },
+      "id": 9,
       "options": {
         "basemap": {
           "config": {},
@@ -64,10 +319,10 @@
               "showLegend": true,
               "style": {
                 "color": {
-                  "field": "region_id",
-                  "fixed": "dark-blue"
+                  "field": "fossil_pct",
+                  "fixed": "dark-green"
                 },
-                "fillOpacity": 0.6,
+                "fillOpacity": 0.7,
                 "rotation": {
                   "fixed": 0,
                   "mode": "fixed"
@@ -125,138 +380,17 @@
         {
           "datasource": { "type": "postgres", "uid": "pipeline-db" },
           "format": "table",
-          "rawSql": "SELECT name, operator, facility_type AS \"type\", region_id, capacity_mw_est, year_opened, lat, lon FROM marts.datacenter_facilities ORDER BY capacity_mw_est DESC",
+          "rawSql": "SELECT f.name, f.operator, f.facility_type AS type, f.lat, f.lon, f.region_id, f.capacity_mw_est, ROUND(g.fossil_pct::numeric, 1) AS fossil_pct, ROUND(g.clean_pct::numeric, 1) AS clean_pct, ROUND((d.demand_avg_mw / 1000.0)::numeric, 1) AS demand_gw FROM marts.datacenter_facilities f LEFT JOIN (SELECT region_id, AVG(fossil_pct) AS fossil_pct, AVG(clean_pct) AS clean_pct FROM grid_generation_raw WHERE time >= NOW() - INTERVAL '26 hours' GROUP BY region_id) g ON f.region_id = g.region_id LEFT JOIN (SELECT region_id, AVG(demand_avg_mw) AS demand_avg_mw FROM grid_demand_hourly WHERE bucket >= NOW() - INTERVAL '3 hours' GROUP BY region_id) d ON f.region_id = d.region_id ORDER BY f.capacity_mw_est DESC",
           "refId": "A"
         }
       ],
-      "title": "Data Center Locations — marker size = estimated MW capacity",
+      "title": "Data Center Locations — hover for live grid state",
       "type": "geomap"
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 19 },
-      "id": 3,
-      "title": "Regional Capacity Summary",
-      "type": "row"
-    },
-    {
-      "datasource": { "type": "postgres", "uid": "pipeline-db" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "orange", "value": null }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 20 },
-      "id": 4,
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "center",
-        "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "auto"
-      },
-      "pluginVersion": "10.4.0",
-      "targets": [
-        {
-          "datasource": { "type": "postgres", "uid": "pipeline-db" },
-          "format": "table",
-          "rawSql": "SELECT SUM(capacity_mw_est)::int AS \"ERCOT — Estimated MW\" FROM marts.datacenter_facilities WHERE region_id = 'ERCOT'",
-          "refId": "A"
-        }
-      ],
-      "title": "ERCOT (Texas) — Total Tracked Capacity",
-      "type": "stat"
-    },
-    {
-      "datasource": { "type": "postgres", "uid": "pipeline-db" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "blue", "value": null }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 4, "w": 8, "x": 8, "y": 20 },
-      "id": 5,
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "center",
-        "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "auto"
-      },
-      "pluginVersion": "10.4.0",
-      "targets": [
-        {
-          "datasource": { "type": "postgres", "uid": "pipeline-db" },
-          "format": "table",
-          "rawSql": "SELECT SUM(capacity_mw_est)::int AS \"CAISO — Estimated MW\" FROM marts.datacenter_facilities WHERE region_id = 'CAISO'",
-          "refId": "A"
-        }
-      ],
-      "title": "CAISO (NorCal) — Total Tracked Capacity",
-      "type": "stat"
-    },
-    {
-      "datasource": { "type": "postgres", "uid": "pipeline-db" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 20 },
-      "id": 6,
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "center",
-        "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "auto"
-      },
-      "pluginVersion": "10.4.0",
-      "targets": [
-        {
-          "datasource": { "type": "postgres", "uid": "pipeline-db" },
-          "format": "table",
-          "rawSql": "SELECT SUM(capacity_mw_est)::int AS \"PJM — Estimated MW\" FROM marts.datacenter_facilities WHERE region_id = 'PJM'",
-          "refId": "A"
-        }
-      ],
-      "title": "PJM (Northern Virginia) — Total Tracked Capacity",
-      "type": "stat"
-    },
-    {
-      "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 24 },
-      "id": 7,
+      "id": 10,
       "title": "Facility Directory",
       "type": "row"
     },
@@ -319,7 +453,7 @@
         ]
       },
       "gridPos": { "h": 14, "w": 24, "x": 0, "y": 25 },
-      "id": 8,
+      "id": 11,
       "options": {
         "cellHeight": "sm",
         "footer": { "countRows": false, "fields": "", "reducer": ["sum"], "show": false },
@@ -339,7 +473,7 @@
       "type": "table"
     }
   ],
-  "refresh": "",
+  "refresh": "5m",
   "schemaVersion": 38,
   "tags": ["energy", "datacenter", "infrastructure", "geomap"],
   "time": { "from": "now-1y", "to": "now" },
@@ -347,5 +481,5 @@
   "timezone": "utc",
   "title": "Data Center Grid Footprint",
   "uid": "datacenter-geomap",
-  "version": 1
+  "version": 2
 }
