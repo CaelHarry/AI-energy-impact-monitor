@@ -1,0 +1,403 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "title": "Current Grid Mix (24-hour average)",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "pipeline-db" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 25 },
+              { "color": "green", "value": 45 }
+            ]
+          },
+          "unit": "percent",
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 1 },
+      "id": 2,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "pipeline-db" },
+          "format": "table",
+          "rawSql": "SELECT ROUND(AVG(clean_pct)::numeric, 1) AS \"Clean %\" FROM grid_generation_raw WHERE time >= NOW() - INTERVAL '24 hours' AND region_id = 'ERCOT'",
+          "refId": "A"
+        }
+      ],
+      "title": "ERCOT — Clean Energy %",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "pipeline-db" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 25 },
+              { "color": "green", "value": 45 }
+            ]
+          },
+          "unit": "percent",
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 8, "x": 8, "y": 1 },
+      "id": 3,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "pipeline-db" },
+          "format": "table",
+          "rawSql": "SELECT ROUND(AVG(clean_pct)::numeric, 1) AS \"Clean %\" FROM grid_generation_raw WHERE time >= NOW() - INTERVAL '24 hours' AND region_id = 'CAISO'",
+          "refId": "A"
+        }
+      ],
+      "title": "CAISO — Clean Energy %",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "pipeline-db" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 25 },
+              { "color": "green", "value": 45 }
+            ]
+          },
+          "unit": "percent",
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 1 },
+      "id": 4,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "pipeline-db" },
+          "format": "table",
+          "rawSql": "SELECT ROUND(AVG(clean_pct)::numeric, 1) AS \"Clean %\" FROM grid_generation_raw WHERE time >= NOW() - INTERVAL '24 hours' AND region_id = 'PJM'",
+          "refId": "A"
+        }
+      ],
+      "title": "PJM — Clean Energy %",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
+      "id": 5,
+      "title": "Energy Mix Breakdown",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "pipeline-db" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "%",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "lineWidth": 1,
+            "scaleDistribution": { "type": "linear" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          },
+          "unit": "percent"
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Clean %" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "#73BF69", "mode": "fixed" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Fossil %" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "#FF9830", "mode": "fixed" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Nuclear %" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "#5794F2", "mode": "fixed" } }
+            ]
+          }
+        ]
+      },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 6 },
+      "id": 6,
+      "options": {
+        "barRadius": 0.05,
+        "barWidth": 0.7,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "orientation": "auto",
+        "showValue": "always",
+        "stacking": "none",
+        "tooltip": { "mode": "multi", "sort": "none" },
+        "xField": "Region",
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "pipeline-db" },
+          "format": "table",
+          "rawSql": "SELECT region_id AS \"Region\", ROUND(AVG(clean_pct)::numeric, 1) AS \"Clean %\", ROUND(AVG(fossil_pct)::numeric, 1) AS \"Fossil %\", ROUND(AVG(nuclear_pct)::numeric, 1) AS \"Nuclear %\" FROM grid_generation_raw WHERE time >= NOW() - INTERVAL '7 days' GROUP BY region_id ORDER BY region_id",
+          "refId": "A"
+        }
+      ],
+      "title": "Energy Mix by Region (7-day average)",
+      "type": "barchart"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 16 },
+      "id": 7,
+      "title": "Live Grid Demand",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "pipeline-db" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "MW",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 17 },
+      "id": 8,
+      "options": {
+        "legend": {
+          "calcs": ["mean", "max"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "pipeline-db" },
+          "format": "time_series",
+          "rawSql": "SELECT bucket AS \"time\", MAX(CASE WHEN region_id = 'ERCOT' THEN demand_avg_mw END) AS \"ERCOT\", MAX(CASE WHEN region_id = 'CAISO' THEN demand_avg_mw END) AS \"CAISO\", MAX(CASE WHEN region_id = 'PJM' THEN demand_avg_mw END) AS \"PJM\" FROM grid_demand_hourly WHERE $__timeFilter(bucket) GROUP BY bucket ORDER BY bucket",
+          "refId": "A"
+        }
+      ],
+      "title": "Grid Demand by Region",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 25 },
+      "id": 9,
+      "title": "Air Quality — PM2.5 AQI",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "pipeline-db" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "AQI",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "line" }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 51 },
+              { "color": "orange", "value": 101 },
+              { "color": "red", "value": 151 }
+            ]
+          },
+          "unit": "none",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 26 },
+      "id": 10,
+      "options": {
+        "legend": {
+          "calcs": ["mean", "max"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "pipeline-db" },
+          "format": "time_series",
+          "rawSql": "SELECT bucket AS \"time\", MAX(CASE WHEN region_id = 'ERCOT' THEN aqi_avg END) AS \"ERCOT PM2.5\", MAX(CASE WHEN region_id = 'CAISO' THEN aqi_avg END) AS \"CAISO PM2.5\", MAX(CASE WHEN region_id = 'PJM' THEN aqi_avg END) AS \"PJM PM2.5\" FROM aqi_hourly WHERE $__timeFilter(bucket) AND parameter = 'PM2.5' GROUP BY bucket ORDER BY bucket",
+          "refId": "A"
+        }
+      ],
+      "title": "PM2.5 AQI by Region",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "5m",
+  "schemaVersion": 38,
+  "tags": ["energy", "ai", "grid", "impact"],
+  "time": { "from": "now-24h", "to": "now" },
+  "timepicker": {},
+  "timezone": "utc",
+  "title": "AI Energy Impact Monitor",
+  "uid": "ai-energy-impact",
+  "version": 1
+}

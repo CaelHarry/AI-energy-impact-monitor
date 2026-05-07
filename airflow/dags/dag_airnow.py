@@ -64,7 +64,7 @@ def dag_airnow():
                     "endDate":    hour_str,
                     "parameters": PARAMETERS,
                     "BBOX":       bbox,
-                    "dataType":   "C",
+                    "dataType":   "A",
                     "format":     "application/json",
                     "verbose":    "1",
                     "API_KEY":    api_key,
@@ -110,7 +110,7 @@ def dag_airnow():
                     lon=item.get("Longitude"),
                     parameter=item.get("Parameter", ""),
                     aqi=int(aqi_val) if aqi_val is not None and int(aqi_val) >= 0 else None,
-                    concentration=item.get("Value") or item.get("RawConcentration"),
+                    concentration=item.get("RawConcentration") or item.get("Value"),
                     unit=item.get("Unit") or None,
                     category=category_name or None,
                 )

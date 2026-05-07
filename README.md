@@ -191,6 +191,35 @@ The dashboard has three sections:
 
 The dashboard and datasource are fully provisioned from files in `grafana/provisioning/` — no manual setup required after `make up`.
 
+## AI Energy Impact dashboard
+
+The main project dashboard auto-provisions at [http://localhost:3000](http://localhost:3000) under the title **AI Energy Impact Monitor**. It refreshes every 5 minutes and defaults to a 24-hour window.
+
+The dashboard has four sections:
+
+| Section | Panel type | Data source | What it shows |
+|---|---|---|---|
+| Current Grid Mix | 3 stat cards (one per region) | `grid_generation_raw` | 24-hour average clean energy % for ERCOT, CAISO, and PJM. Color-coded: red below 25 %, yellow 25–45 %, green 45 %+. |
+| Energy Mix Breakdown | Grouped bar chart | `grid_generation_raw` | 7-day average of Clean %, Fossil %, and Nuclear % side-by-side for each region. Clean = nuclear + wind + solar + hydro. Fossil = gas + coal. |
+| Live Grid Demand | Time series | `grid_demand_hourly` | Hourly demand in MW per region across the selected time window. PJM typically peaks around 80 GW, ERCOT around 60 GW, CAISO around 25 GW. |
+| Air Quality — PM2.5 AQI | Time series | `aqi_hourly` | Hourly PM2.5 AQI per region. Threshold lines at 51 (Moderate), 101 (Unhealthy for Sensitive Groups), and 151 (Unhealthy). |
+
+### Reading the clean energy percentages
+
+The stat cards reflect a real split in how decarbonised each grid is:
+
+- **CAISO (California)** consistently reads near or above 90 % in spring and autumn. By 2025–26, utility-scale batteries shift daytime solar surplus into the overnight hours, so even at midnight gas usage is only ~2,000 MW on a 25,000 MW grid. The green card is expected.
+- **PJM (Mid-Atlantic / Midwest)** sits in the 40–50 % range. Its large nuclear fleet (~35 GW) accounts for most of the clean share; coal and gas fill the remainder.
+- **ERCOT (Texas)** typically reads 30–45 %. Texas has the largest wind fleet in the US and growing solar capacity, but natural gas remains the dominant balancing fuel.
+
+### Data freshness notes
+
+- **Grid generation** (EIA) has a 14–24 h publish lag — the 24-hour and 7-day averages pull the most recent data EIA has released, which may be a day behind real time.
+- **Grid demand** (EIA Form 930) has a similar lag; demand time series data may stop a day short of "now."
+- **AQI** (AirNow) updates hourly with less than a 1-hour lag — the AQI panel reflects near-real-time air quality.
+
+All panels query TimescaleDB source tables and continuous aggregates directly, so they remain live regardless of whether the dbt transformation layer has been re-run.
+
 ## Build phases
 
 - [x] Phase 1 — Docker Compose infrastructure
@@ -198,7 +227,7 @@ The dashboard and datasource are fully provisioned from files in `grafana/provis
 - [x] Phase 3 — Airflow DAGs (one per source)
 - [x] Phase 4 — dbt transformation layer (16 models, 65 tests)
 - [x] Phase 4.5 — Grafana pipeline health monitoring dashboard
-- [ ] Phase 5 — Live AI energy impact heatmap dashboard
+- [x] Phase 5 — AI Energy Impact Monitor dashboard (grid mix, demand, AQI)
 
 ## Useful commands
 
