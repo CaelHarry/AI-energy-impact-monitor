@@ -255,7 +255,7 @@ The dashboard has four sections:
 | Current Grid Mix | 3 stat cards (one per region) | `grid_generation_raw` | 24-hour average clean energy % for ERCOT, CAISO, and PJM. Color-coded: red below 25 %, yellow 25–45 %, green 45 %+. |
 | Energy Mix Breakdown | Grouped bar chart | `grid_generation_raw` | 7-day average of Clean %, Fossil %, and Nuclear % side-by-side for each region. Clean = nuclear + wind + solar + hydro. Fossil = gas + coal. |
 | Live Grid Demand | Time series | `grid_demand_hourly` | Hourly demand in MW per region across the selected time window. PJM typically peaks around 80 GW, ERCOT around 60 GW, CAISO around 25 GW. |
-| Air Quality — PM2.5 AQI | Time series | `aqi_hourly` | Hourly PM2.5 AQI per region. Threshold lines at 51 (Moderate), 101 (Unhealthy for Sensitive Groups), and 151 (Unhealthy). |
+| Air Quality — PM2.5 Concentration | Time series | `aqi_raw` | Hourly average PM2.5 concentration (µg/m³) per region. Threshold lines at 12 µg/m³ (Moderate), 35.4 µg/m³ (Unhealthy for Sensitive Groups), and 55.4 µg/m³ (Unhealthy). |
 
 ### Reading the clean energy percentages
 
@@ -269,9 +269,33 @@ The stat cards reflect a real split in how decarbonised each grid is:
 
 - **Grid generation** (EIA) has a 14–24 h publish lag — the 24-hour and 7-day averages pull the most recent data EIA has released, which may be a day behind real time.
 - **Grid demand** (EIA Form 930) has a similar lag; demand time series data may stop a day short of "now."
-- **AQI** (AirNow) updates hourly with less than a 1-hour lag — the AQI panel reflects near-real-time air quality.
+- **PM2.5 concentration** (AirNow) updates hourly with less than a 1-hour lag. The panel queries `aqi_raw` directly using raw concentration (µg/m³) rather than the AQI index. AirNow only computes a valid AQI index for ~18 % of station readings (requiring sufficient recent samples); raw concentration is available for ~80 % of readings and is more suitable for continuous correlation analysis.
 
 All panels query TimescaleDB source tables and continuous aggregates directly, so they remain live regardless of whether the dbt transformation layer has been re-run.
+
+## Nuclear Fleet Status dashboard
+
+A second dashboard auto-provisions at [http://localhost:3000](http://localhost:3000) under the title **Nuclear Fleet Status**. It refreshes hourly and defaults to a 30-day window.
+
+Nuclear output is the structural variable in the clean-energy story — it is baseload, runs at near-100 % capacity factor, and is the primary factor displacing gas peakers during demand spikes. This dashboard tracks the fleet continuously so any unplanned outages that would reduce the clean buffer are immediately visible.
+
+The dashboard has three sections:
+
+| Section | Panel type | Data source | What it shows |
+|---|---|---|---|
+| Regional Average Capacity | 3 stat cards (one per region) | `nuclear_status_raw` | 48-hour average capacity factor per region. Color-coded: red below 70 %, yellow 70–90 %, green 90 %+. A red card means unplanned outages are reducing the clean buffer. |
+| Reactor Status Table | Table | `nuclear_status_raw` | Latest capacity % per reactor unit, sorted by region then capacity descending. Shows operator, report date, and color-coded capacity column. |
+| 30-Day Capacity Trend | Time series | `nuclear_status_raw` | Daily average nuclear capacity % for ERCOT, CAISO, and PJM over the selected window. Used to spot sustained derating events vs. brief maintenance outages. |
+
+### Why nuclear capacity matters for this project
+
+When a reactor partially derates or goes offline, gas peakers spin up to compensate — directly increasing the fossil % of the grid and raising the marginal emission rate. During a concurrent temperature spike (which drives AI data center cooling load), the combination produces the worst-case AQI outcome this pipeline is designed to detect. The Nuclear Fleet dashboard makes that risk visible in near-real time (NRC data lags by ~1 day).
+
+Notable reactors tracked:
+
+- **ERCOT**: South Texas Project (2 × ~1.35 GW), Comanche Peak (2 × ~1.2 GW)
+- **CAISO**: Diablo Canyon (2 × ~1.15 GW) — the only operating reactor in California; license extended to ~2030
+- **PJM**: ~35 GW fleet across Pennsylvania, New Jersey, Illinois, and Virginia — the largest nuclear fleet of any US grid region
 
 ## Build phases
 
@@ -280,7 +304,8 @@ All panels query TimescaleDB source tables and continuous aggregates directly, s
 - [x] Phase 3 — Airflow DAGs (one per source)
 - [x] Phase 4 — dbt transformation layer (16 models, 65 tests)
 - [x] Phase 4.5 — Grafana pipeline health monitoring dashboard
-- [x] Phase 5 — AI Energy Impact Monitor dashboard (grid mix, demand, AQI)
+- [x] Phase 5 — AI Energy Impact Monitor dashboard (grid mix, demand, PM2.5 concentration)
+- [x] Phase 5.5 — Nuclear Fleet Status dashboard (capacity factors, reactor table, 30-day trend)
 
 ## Useful commands
 

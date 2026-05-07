@@ -22,7 +22,7 @@
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
       "id": 1,
-      "title": "Current Grid Mix (24-hour average)",
+      "title": "Regional Nuclear Capacity (latest daily report)",
       "type": "row"
     },
     {
@@ -35,8 +35,8 @@
             "mode": "absolute",
             "steps": [
               { "color": "red", "value": null },
-              { "color": "yellow", "value": 25 },
-              { "color": "green", "value": 45 }
+              { "color": "yellow", "value": 70 },
+              { "color": "green", "value": 90 }
             ]
           },
           "unit": "percent",
@@ -65,11 +65,11 @@
         {
           "datasource": { "type": "postgres", "uid": "pipeline-db" },
           "format": "table",
-          "rawSql": "SELECT ROUND(AVG(clean_pct)::numeric, 1) AS \"Clean %\" FROM grid_generation_raw WHERE time >= NOW() - INTERVAL '24 hours' AND region_id = 'ERCOT'",
+          "rawSql": "SELECT ROUND(AVG(power_pct)::numeric, 1) AS \"Avg Capacity %\" FROM nuclear_status_raw WHERE time >= NOW() - INTERVAL '48 hours' AND region_id = 'ERCOT' AND power_pct IS NOT NULL",
           "refId": "A"
         }
       ],
-      "title": "ERCOT — Clean Energy %",
+      "title": "ERCOT — Avg Nuclear Capacity",
       "type": "stat"
     },
     {
@@ -82,8 +82,8 @@
             "mode": "absolute",
             "steps": [
               { "color": "red", "value": null },
-              { "color": "yellow", "value": 25 },
-              { "color": "green", "value": 45 }
+              { "color": "yellow", "value": 70 },
+              { "color": "green", "value": 90 }
             ]
           },
           "unit": "percent",
@@ -112,11 +112,11 @@
         {
           "datasource": { "type": "postgres", "uid": "pipeline-db" },
           "format": "table",
-          "rawSql": "SELECT ROUND(AVG(clean_pct)::numeric, 1) AS \"Clean %\" FROM grid_generation_raw WHERE time >= NOW() - INTERVAL '24 hours' AND region_id = 'CAISO'",
+          "rawSql": "SELECT ROUND(AVG(power_pct)::numeric, 1) AS \"Avg Capacity %\" FROM nuclear_status_raw WHERE time >= NOW() - INTERVAL '48 hours' AND region_id = 'CAISO' AND power_pct IS NOT NULL",
           "refId": "A"
         }
       ],
-      "title": "CAISO — Clean Energy %",
+      "title": "CAISO — Avg Nuclear Capacity",
       "type": "stat"
     },
     {
@@ -129,8 +129,8 @@
             "mode": "absolute",
             "steps": [
               { "color": "red", "value": null },
-              { "color": "yellow", "value": 25 },
-              { "color": "green", "value": 45 }
+              { "color": "yellow", "value": 70 },
+              { "color": "green", "value": 90 }
             ]
           },
           "unit": "percent",
@@ -159,106 +159,101 @@
         {
           "datasource": { "type": "postgres", "uid": "pipeline-db" },
           "format": "table",
-          "rawSql": "SELECT ROUND(AVG(clean_pct)::numeric, 1) AS \"Clean %\" FROM grid_generation_raw WHERE time >= NOW() - INTERVAL '24 hours' AND region_id = 'PJM'",
+          "rawSql": "SELECT ROUND(AVG(power_pct)::numeric, 1) AS \"Avg Capacity %\" FROM nuclear_status_raw WHERE time >= NOW() - INTERVAL '48 hours' AND region_id = 'PJM' AND power_pct IS NOT NULL",
           "refId": "A"
         }
       ],
-      "title": "PJM — Clean Energy %",
+      "title": "PJM — Avg Nuclear Capacity",
       "type": "stat"
     },
     {
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
       "id": 5,
-      "title": "Energy Mix Breakdown",
+      "title": "Reactor Status — Latest Daily Report",
       "type": "row"
     },
     {
       "datasource": { "type": "postgres", "uid": "pipeline-db" },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
+          "color": { "mode": "thresholds" },
           "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "%",
-            "axisPlacement": "auto",
-            "fillOpacity": 80,
-            "gradientMode": "none",
-            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
-            "lineWidth": 1,
-            "scaleDistribution": { "type": "linear" },
-            "thresholdsStyle": { "mode": "off" }
+            "align": "auto",
+            "cellOptions": { "type": "auto" },
+            "inspect": false
           },
           "mappings": [],
-          "max": 100,
-          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [{ "color": "green", "value": null }]
-          },
-          "unit": "percent"
+          }
         },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "Clean %" },
+            "matcher": { "id": "byName", "options": "Capacity %" },
             "properties": [
-              { "id": "color", "value": { "fixedColor": "#73BF69", "mode": "fixed" } }
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "red", "value": null },
+                    { "color": "yellow", "value": 70 },
+                    { "color": "green", "value": 90 }
+                  ]
+                }
+              },
+              { "id": "custom.cellOptions", "value": { "type": "color-background" } },
+              { "id": "unit", "value": "percent" },
+              { "id": "min", "value": 0 },
+              { "id": "max", "value": 100 },
+              { "id": "custom.width", "value": 120 }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "Fossil %" },
+            "matcher": { "id": "byName", "options": "Grid Region" },
             "properties": [
-              { "id": "color", "value": { "fixedColor": "#FF9830", "mode": "fixed" } }
+              { "id": "custom.width", "value": 110 }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "Nuclear %" },
+            "matcher": { "id": "byName", "options": "Report Date" },
             "properties": [
-              { "id": "color", "value": { "fixedColor": "#5794F2", "mode": "fixed" } }
+              { "id": "custom.width", "value": 120 }
             ]
           }
         ]
       },
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 6 },
+      "gridPos": { "h": 14, "w": 24, "x": 0, "y": 6 },
       "id": 6,
       "options": {
-        "barRadius": 0.05,
-        "barWidth": 0.7,
-        "fullHighlight": false,
-        "groupWidth": 0.7,
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": ["sum"],
+          "show": false
         },
-        "orientation": "auto",
-        "showValue": "always",
-        "stacking": "none",
-        "tooltip": { "mode": "multi", "sort": "none" },
-        "xField": "Region",
-        "xTickLabelRotation": 0,
-        "xTickLabelSpacing": 0
+        "showHeader": true
       },
       "pluginVersion": "10.4.0",
       "targets": [
         {
           "datasource": { "type": "postgres", "uid": "pipeline-db" },
           "format": "table",
-          "rawSql": "SELECT region_id AS \"Region\", ROUND(AVG(clean_pct)::numeric, 1) AS \"Clean %\", ROUND(AVG(fossil_pct)::numeric, 1) AS \"Fossil %\", ROUND(AVG(nuclear_pct)::numeric, 1) AS \"Nuclear %\" FROM grid_generation_raw WHERE time >= NOW() - INTERVAL '7 days' GROUP BY region_id ORDER BY region_id",
+          "rawSql": "SELECT * FROM (SELECT DISTINCT ON (unit_name) unit_name AS \"Reactor\", region_id AS \"Grid Region\", ROUND(power_pct::numeric, 0) AS \"Capacity %\", COALESCE(operator, 'Unknown') AS \"Operator\", time::date AS \"Report Date\" FROM nuclear_status_raw WHERE region_id IS NOT NULL AND power_pct IS NOT NULL ORDER BY unit_name, time DESC) latest ORDER BY \"Grid Region\", \"Capacity %\" DESC",
           "refId": "A"
         }
       ],
-      "title": "Energy Mix by Region (7-day average)",
-      "type": "barchart"
+      "title": "All Tracked Reactors — Current Status",
+      "type": "table"
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 16 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 20 },
       "id": 7,
-      "title": "Live Grid Demand",
+      "title": "Nuclear Output Trend",
       "type": "row"
     },
     {
@@ -270,7 +265,7 @@
             "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "MW",
+            "axisLabel": "% licensed capacity",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
@@ -288,116 +283,47 @@
             "thresholdsStyle": { "mode": "off" }
           },
           "mappings": [],
+          "max": 105,
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [{ "color": "green", "value": null }]
           },
-          "unit": "none"
+          "unit": "percent"
         },
         "overrides": []
       },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 17 },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 21 },
       "id": 8,
       "options": {
         "legend": {
-          "calcs": ["mean", "max"],
+          "calcs": ["mean", "min"],
           "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
         },
-        "tooltip": { "mode": "multi", "sort": "desc" }
+        "tooltip": { "mode": "multi", "sort": "none" }
       },
       "pluginVersion": "10.4.0",
       "targets": [
         {
           "datasource": { "type": "postgres", "uid": "pipeline-db" },
           "format": "time_series",
-          "rawSql": "SELECT bucket AS \"time\", MAX(CASE WHEN region_id = 'ERCOT' THEN demand_avg_mw END) AS \"ERCOT\", MAX(CASE WHEN region_id = 'CAISO' THEN demand_avg_mw END) AS \"CAISO\", MAX(CASE WHEN region_id = 'PJM' THEN demand_avg_mw END) AS \"PJM\" FROM grid_demand_hourly WHERE $__timeFilter(bucket) GROUP BY bucket ORDER BY bucket",
+          "rawSql": "SELECT time, ROUND(AVG(CASE WHEN region_id = 'ERCOT' THEN power_pct END)::numeric, 1) AS \"ERCOT\", ROUND(AVG(CASE WHEN region_id = 'CAISO' THEN power_pct END)::numeric, 1) AS \"CAISO\", ROUND(AVG(CASE WHEN region_id = 'PJM' THEN power_pct END)::numeric, 1) AS \"PJM\" FROM nuclear_status_raw WHERE $__timeFilter(time) AND power_pct IS NOT NULL GROUP BY time ORDER BY time",
           "refId": "A"
         }
       ],
-      "title": "Grid Demand by Region",
-      "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 25 },
-      "id": 9,
-      "title": "Air Quality — PM2.5 Concentration",
-      "type": "row"
-    },
-    {
-      "datasource": { "type": "postgres", "uid": "pipeline-db" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "palette-classic" },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "µg/m³",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
-            "insertNulls": false,
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "scaleDistribution": { "type": "linear" },
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": { "group": "A", "mode": "none" },
-            "thresholdsStyle": { "mode": "line" }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 51 },
-              { "color": "orange", "value": 101 },
-              { "color": "red", "value": 151 }
-            ]
-          },
-          "unit": "none",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 26 },
-      "id": 10,
-      "options": {
-        "legend": {
-          "calcs": ["mean", "max"],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": { "mode": "multi", "sort": "desc" }
-      },
-      "pluginVersion": "10.4.0",
-      "targets": [
-        {
-          "datasource": { "type": "postgres", "uid": "pipeline-db" },
-          "format": "time_series",
-          "rawSql": "SELECT time_bucket('1 hour', time) AS \"time\", AVG(CASE WHEN region_id = 'ERCOT' THEN concentration END) AS \"ERCOT PM2.5\", AVG(CASE WHEN region_id = 'CAISO' THEN concentration END) AS \"CAISO PM2.5\", AVG(CASE WHEN region_id = 'PJM' THEN concentration END) AS \"PJM PM2.5\" FROM aqi_raw WHERE $__timeFilter(time) AND parameter = 'PM2.5' AND concentration IS NOT NULL GROUP BY 1 ORDER BY 1",
-          "refId": "A"
-        }
-      ],
-      "title": "PM2.5 Concentration by Region (µg/m³)",
+      "title": "Fleet-Average Capacity by Region (% of licensed capacity)",
       "type": "timeseries"
     }
   ],
-  "refresh": "5m",
+  "refresh": "1h",
   "schemaVersion": 38,
-  "tags": ["energy", "ai", "grid", "impact"],
-  "time": { "from": "now-24h", "to": "now" },
+  "tags": ["energy", "nuclear", "nrc"],
+  "time": { "from": "now-30d", "to": "now" },
   "timepicker": {},
   "timezone": "utc",
-  "title": "AI Energy Impact Monitor",
-  "uid": "ai-energy-impact",
+  "title": "Nuclear Fleet Status",
+  "uid": "nuclear-fleet",
   "version": 1
 }
