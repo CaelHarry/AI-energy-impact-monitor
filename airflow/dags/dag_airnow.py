@@ -9,7 +9,7 @@
 
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import httpx
 from airflow.decorators import dag, task
@@ -66,14 +66,15 @@ def dag_airnow():
         """
         api_key = os.environ["AIRNOW_API_KEY"]
         now = datetime.now(timezone.utc)
-        hour_str = now.strftime("%Y-%m-%dT%H")
+        end_str   = now.strftime("%Y-%m-%dT%H")
+        start_str = (now - timedelta(hours=2)).strftime("%Y-%m-%dT%H")
 
         all_rows: list[dict] = []
         with httpx.Client(timeout=30, follow_redirects=True) as client:
             for region_id, bbox in REGION_BBOXES.items():
                 params = {
-                    "startDate":  hour_str,
-                    "endDate":    hour_str,
+                    "startDate":  start_str,
+                    "endDate":    end_str,
                     "parameters": PARAMETERS,
                     "BBOX":       bbox,
                     "dataType":   "A",
@@ -91,7 +92,7 @@ def dag_airnow():
                     for item in data:
                         item["_region_id"] = region_id
                     all_rows.extend(data)
-                    log.info("AirNow %s: fetched %d observations", region_id, len(data))
+                    log.info("AirNow %s: fetched %d observations (%s → %s)", region_id, len(data), start_str, end_str)
                 except Exception as e:
                     log.error("AirNow fetch failed for %s: %s", region_id, e)
 

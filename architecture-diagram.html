@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AI Energy Impact Monitor — Architecture</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    body {
+      background: #0f1117;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      font-family: sans-serif;
+      padding: 40px 20px;
+      box-sizing: border-box;
+    }
+    h1 {
+      color: #e0e0e0;
+      font-size: 1.3rem;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      margin-bottom: 32px;
+      text-transform: uppercase;
+    }
+    .mermaid {
+      background: #0f1117;
+      max-width: 1100px;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <h1>AI Energy Impact Monitor — Architecture</h1>
+  <div class="mermaid">
+%%{
+  init: {
+    "theme": "dark",
+    "themeVariables": {
+      "primaryColor": "#1e2130",
+      "primaryTextColor": "#e0e0e0",
+      "primaryBorderColor": "#4a5568",
+      "lineColor": "#718096",
+      "secondaryColor": "#1a1f2e",
+      "tertiaryColor": "#12151f",
+      "clusterBkg": "#12151f",
+      "clusterBorder": "#4a5568",
+      "edgeLabelBackground": "#0f1117",
+      "fontFamily": "ui-monospace, monospace",
+      "fontSize": "13px"
+    }
+  }
+}%%
+flowchart LR
+    subgraph SRC["  Data Sources  "]
+        direction TB
+        EIA["EIA API\nGrid Generation"]
+        DEMAND["ERCOT / CAISO / PJM\nGrid Demand"]
+        AIR["AirNow / EPA\nAir Quality"]
+        WEATHER["Open-Meteo\nWeather"]
+        NRC["NRC\nNuclear Status"]
+    end
+
+    subgraph ORCH["  Airflow — Orchestration  "]
+        direction TB
+        D1["dag_eia_generation\nhourly"]
+        D2["dag_grid_demand\n5 min"]
+        D3["dag_airnow\nhourly"]
+        D4["dag_weather\nhourly"]
+        D5["dag_nrc\ndaily"]
+    end
+
+    subgraph DB["  TimescaleDB — Raw Hypertables  "]
+        direction TB
+        T1["grid_generation_raw"]
+        T2["grid_demand_raw"]
+        T3["aqi_raw"]
+        T4["weather_raw"]
+        T5["nuclear_status_raw"]
+    end
+
+    subgraph DBT["  dbt — Transformation  "]
+        direction TB
+        STAGE["staging + intermediate\nephemeral"]
+        MART["mart_demand_spike_events\npm25_aqi_delta_2h per spike"]
+    end
+
+    subgraph VIZ["  Grafana — Dashboards  "]
+        direction TB
+        G1["AI Energy Impact Monitor\nGrid mix · Demand · AQI"]
+        G2["Temp vs Grid Demand\nCorrelation by region"]
+        G3["Demand Spike Events\nSpike log + AQI lag"]
+    end
+
+    EIA --> D1
+    DEMAND --> D2
+    AIR --> D3
+    WEATHER --> D4
+    NRC --> D5
+
+    D1 --> T1
+    D2 --> T2
+    D3 --> T3
+    D4 --> T4
+    D5 --> T5
+
+    T1 & T2 & T3 & T4 & T5 --> STAGE
+    STAGE --> MART
+
+    T1 & T2 & T3 --> G1
+    T2 & T4 --> G2
+    MART --> G3
+  </div>
+
+  <script>
+    mermaid.initialize({ startOnLoad: true });
+  </script>
+</body>
+</html>

@@ -99,7 +99,7 @@
         {
           "datasource": { "type": "postgres", "uid": "pipeline-db" },
           "format": "time_series",
-          "rawSql": "SELECT bucket AS \"time\", ROUND((demand_avg_mw / 1000)::numeric, 1) AS \"Demand (GW)\" FROM grid_demand_hourly WHERE region_id = 'ERCOT' AND $__timeFilter(bucket) ORDER BY bucket",
+          "rawSql": "SELECT time_bucket('1 hour', time) AS \"time\", ROUND((AVG(demand_mw) / 1000)::numeric, 1) AS \"Demand (GW)\" FROM grid_demand_raw WHERE region_id = 'ERCOT' AND $__timeFilter(time) GROUP BY 1 ORDER BY 1",
           "refId": "B"
         }
       ],
@@ -186,7 +186,7 @@
         {
           "datasource": { "type": "postgres", "uid": "pipeline-db" },
           "format": "time_series",
-          "rawSql": "SELECT bucket AS \"time\", ROUND((demand_avg_mw / 1000)::numeric, 1) AS \"Demand (GW)\" FROM grid_demand_hourly WHERE region_id = 'CAISO' AND $__timeFilter(bucket) ORDER BY bucket",
+          "rawSql": "SELECT time_bucket('1 hour', time) AS \"time\", ROUND((AVG(demand_mw) / 1000)::numeric, 1) AS \"Demand (GW)\" FROM grid_demand_raw WHERE region_id = 'CAISO' AND $__timeFilter(time) GROUP BY 1 ORDER BY 1",
           "refId": "B"
         }
       ],
@@ -273,7 +273,7 @@
         {
           "datasource": { "type": "postgres", "uid": "pipeline-db" },
           "format": "time_series",
-          "rawSql": "SELECT bucket AS \"time\", ROUND((demand_avg_mw / 1000)::numeric, 1) AS \"Demand (GW)\" FROM grid_demand_hourly WHERE region_id = 'PJM' AND $__timeFilter(bucket) ORDER BY bucket",
+          "rawSql": "SELECT time_bucket('1 hour', time) AS \"time\", ROUND((AVG(demand_mw) / 1000)::numeric, 1) AS \"Demand (GW)\" FROM grid_demand_raw WHERE region_id = 'PJM' AND $__timeFilter(time) GROUP BY 1 ORDER BY 1",
           "refId": "B"
         }
       ],

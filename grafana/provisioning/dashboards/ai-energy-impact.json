@@ -312,7 +312,7 @@
         {
           "datasource": { "type": "postgres", "uid": "pipeline-db" },
           "format": "time_series",
-          "rawSql": "SELECT bucket AS \"time\", MAX(CASE WHEN region_id = 'ERCOT' THEN demand_avg_mw END) AS \"ERCOT\", MAX(CASE WHEN region_id = 'CAISO' THEN demand_avg_mw END) AS \"CAISO\", MAX(CASE WHEN region_id = 'PJM' THEN demand_avg_mw END) AS \"PJM\" FROM grid_demand_hourly WHERE $__timeFilter(bucket) GROUP BY bucket ORDER BY bucket",
+          "rawSql": "SELECT time_bucket('1 hour', time) AS \"time\", MAX(CASE WHEN region_id = 'ERCOT' THEN demand_mw END) AS \"ERCOT\", MAX(CASE WHEN region_id = 'CAISO' THEN demand_mw END) AS \"CAISO\", MAX(CASE WHEN region_id = 'PJM' THEN demand_mw END) AS \"PJM\" FROM grid_demand_raw WHERE $__timeFilter(time) GROUP BY 1 ORDER BY 1",
           "refId": "A"
         }
       ],
@@ -323,7 +323,7 @@
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 25 },
       "id": 9,
-      "title": "Air Quality — PM2.5 Concentration",
+      "title": "Air Quality — PM2.5 AQI",
       "type": "row"
     },
     {
@@ -335,7 +335,7 @@
             "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "µg/m³",
+            "axisLabel": "AQI",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
@@ -359,7 +359,8 @@
               { "color": "green", "value": null },
               { "color": "yellow", "value": 51 },
               { "color": "orange", "value": 101 },
-              { "color": "red", "value": 151 }
+              { "color": "red", "value": 151 },
+              { "color": "purple", "value": 201 }
             ]
           },
           "unit": "none",
@@ -383,11 +384,11 @@
         {
           "datasource": { "type": "postgres", "uid": "pipeline-db" },
           "format": "time_series",
-          "rawSql": "SELECT time_bucket('1 hour', time) AS \"time\", AVG(CASE WHEN region_id = 'ERCOT' THEN concentration END) AS \"ERCOT PM2.5\", AVG(CASE WHEN region_id = 'CAISO' THEN concentration END) AS \"CAISO PM2.5\", AVG(CASE WHEN region_id = 'PJM' THEN concentration END) AS \"PJM PM2.5\" FROM aqi_raw WHERE $__timeFilter(time) AND parameter = 'PM2.5' AND concentration IS NOT NULL GROUP BY 1 ORDER BY 1",
+          "rawSql": "SELECT time_bucket('1 hour', time) AS \"time\", ROUND(AVG(CASE WHEN region_id = 'ERCOT' THEN aqi END)::numeric, 0) AS \"ERCOT PM2.5\", ROUND(AVG(CASE WHEN region_id = 'CAISO' THEN aqi END)::numeric, 0) AS \"CAISO PM2.5\", ROUND(AVG(CASE WHEN region_id = 'PJM' THEN aqi END)::numeric, 0) AS \"PJM PM2.5\" FROM aqi_raw WHERE $__timeFilter(time) AND parameter = 'PM2.5' AND aqi IS NOT NULL GROUP BY 1 ORDER BY 1",
           "refId": "A"
         }
       ],
-      "title": "PM2.5 Concentration by Region (µg/m³)",
+      "title": "PM2.5 AQI by Region (EPA scale: 0–50 Good, 51–100 Moderate, 101–150 USG, 151+ Unhealthy)",
       "type": "timeseries"
     }
   ],
